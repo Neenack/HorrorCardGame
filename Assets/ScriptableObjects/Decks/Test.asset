@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ec67004cacef8e449b9b7f873c176a0d, type: 3}
+  m_Name: Test
+  m_EditorClassIdentifier: Assembly-CSharp::CardDeckSO
+  deckName: Tets desk
+  cards:
+  - {fileID: 11400000, guid: b44e8e684c72a1e4ea3f1844f092f841, type: 2}
+  - {fileID: 11400000, guid: c8d0c443d3bce6a4793a34d82a788eb1, type: 2}
+  - {fileID: 11400000, guid: 8f31e05d1d806ae4ea527d0e6cfb9c37, type: 2}
+  - {fileID: 11400000, guid: dd2111db10906694ea824c626752da35, type: 2}
+  - {fileID: 11400000, guid: 612e09e756de3e946ba6a4303ab1805e, type: 2}
+  - {fileID: 11400000, guid: fc07c777bd3c4474aa4949a58ec60265, type: 2}
+  - {fileID: 11400000, guid: ec1b18ca57c1d5b4281bda0e81638c67, type: 2}
+  - {fileID: 11400000, guid: 7788c870ec71ee64ea65b210c497d8d5, type: 2}
+  - {fileID: 11400000, guid: f0b4a85c24d7c1c47a33f9427d27e183, type: 2}
+  - {fileID: 11400000, guid: 0fcc9e9a430a40c488834e5a78dac11c, type: 2}
