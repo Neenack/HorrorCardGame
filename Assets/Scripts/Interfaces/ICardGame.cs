@@ -15,10 +15,11 @@ public interface ICardGame<TAction> where TAction : class
     IEnumerable<TablePlayer<TAction>> Players { get; }
     IInteractable InteractableDeck { get; }
     PlayingCard TopPileCard { get; }
+    PlayingCard DrawnCard { get; }
     NetworkVariable<ulong> CurrentTurnID { get; }
 
 
     void PlaceCardOnPile(PlayingCard card, bool placeFaceDown = false, float lerpSpeed = 5f);
-    IEnumerator TryExecuteAction(TAction action);
+    void TryExecuteAction(ulong playerID, TAction action);
 
 }

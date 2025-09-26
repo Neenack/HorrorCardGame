@@ -12,8 +12,10 @@ public class CambioPlayer : TablePlayer<CambioAction>
     [Header("Cambio Settings")]
     [SerializeField] private Interactable callCambioButton;
     [SerializeField] private Interactable skipAbilityButton;
+    [SerializeField] private TextMeshProUGUI calledCambioText;
     [SerializeField] private TextMeshPro scoreText;
     [SerializeField] private float rowSpacing = 2.5f;
+
 
     private HashSet<PlayingCard> seenCards = new HashSet<PlayingCard>();
     public HashSet<PlayingCard> SeenCards => seenCards;
@@ -24,23 +26,37 @@ public class CambioPlayer : TablePlayer<CambioAction>
 
     #endregion
 
+
     public override void OnNetworkSpawn()
     {
         base.OnNetworkSpawn();
 
-        callCambioButton.gameObject.SetActive(false);
+        calledCambioText?.gameObject.SetActive(false);
+        callCambioButton?.gameObject.SetActive(false);
+        skipAbilityButton?.gameObject.SetActive(false);
+        scoreText?.gameObject.SetActive(false);
     }
 
 
-    #region Turns
+    #region Turn Logic
 
     protected override void Game_OnGameStarted()
     {
         base.Game_OnGameStarted();
+
+        calledCambioText?.gameObject.SetActive(false);
+        callCambioButton?.gameObject.SetActive(false);
+        skipAbilityButton?.gameObject.SetActive(false);
+        scoreText?.gameObject.SetActive(false);
     }
     protected override void Game_OnGameEnded()
     {
         base.Game_OnGameEnded();
+
+        calledCambioText?.gameObject.SetActive(false);
+        callCambioButton?.gameObject.SetActive(false);
+        skipAbilityButton?.gameObject.SetActive(false);
+        scoreText?.gameObject.SetActive(false);
     }
 
     protected override void StartPlayerTurn()
@@ -48,7 +64,8 @@ public class CambioPlayer : TablePlayer<CambioAction>
         base.StartPlayerTurn();
 
         callCambioButton.gameObject.SetActive(true);
-        Game.InteractableDeck.SetInteractable(true);
+
+        EnableStartTurnInteraction();
     }
 
     protected override void EndPlayerTurn()
@@ -56,7 +73,8 @@ public class CambioPlayer : TablePlayer<CambioAction>
         base.EndPlayerTurn();
 
         callCambioButton.gameObject.SetActive(false);
-        Game.InteractableDeck.SetInteractable(false);
+
+        DisableStartTurnInteraction();
 
         EndTurnServerRpc();
     }
@@ -70,6 +88,114 @@ public class CambioPlayer : TablePlayer<CambioAction>
     public override bool IsPlaying() => !hasPlayedLastTurn.Value;
 
     #endregion
+
+    #region Interaction
+
+    #region Start Of Turn Interaction
+    private void CallCambioButton_OnInteract(object sender, Interactable.InteractEventArgs e)
+    {
+        DisableStartTurnInteraction();
+
+        Game.TryExecuteAction(OwnerClientId, new CambioAction(CambioActionType.CallCambio, true, this));
+    }
+
+    private void InteractableDeck_OnInteract(object sender, Interactable.InteractEventArgs e)
+    {
+        DisableStartTurnInteraction();
+
+        Game.TryExecuteAction(OwnerClientId, new CambioAction(CambioActionType.Draw, false, this));
+    }
+
+    private void EnableStartTurnInteraction()
+    {
+        callCambioButton.OnInteract += CallCambioButton_OnInteract;
+        Game.InteractableDeck.OnInteract += InteractableDeck_OnInteract;
+        Game.InteractableDeck.SetInteractable(true);
+    }
+
+    private void DisableStartTurnInteraction()
+    {
+        callCambioButton.OnInteract -= CallCambioButton_OnInteract;
+        Game.InteractableDeck.OnInteract -= InteractableDeck_OnInteract;
+        Game.InteractableDeck.SetInteractable(false);
+        callCambioButton.gameObject.SetActive(false);
+    }
+
+    #endregion
+
+    #region After Card Draw Interaction
+
+    public void EnableCardDrawnInteraction()
+    {
+        PlayingCard drawnCard = Game.DrawnCard;
+        drawnCard.Interactable.SetInteractable(true);
+        drawnCard.Interactable.OnInteract += DrawnCard_OnInteract;
+
+        foreach (var cardId in handCardIds)
+        {
+            PlayingCard card = GetPlayingCardFromID(cardId);
+            card.Interactable.OnInteract += HandCard_OnInteract;
+        }
+    }
+
+    private void DisableCardDrawnInteration()
+    {
+        PlayingCard drawnCard = Game.DrawnCard;
+        drawnCard.Interactable.SetInteractable(false);
+        drawnCard.Interactable.OnInteract -= DrawnCard_OnInteract;
+
+        foreach (var cardId in handCardIds)
+        {
+            PlayingCard card = GetPlayingCardFromID(cardId);
+            card.Interactable.OnInteract -= HandCard_OnInteract;
+        }
+    }
+
+    private void DrawnCard_OnInteract(object sender, Interactable.InteractEventArgs e)
+    {
+        if (e.playerID != OwnerClientId) return;
+
+        DisableCardDrawnInteration();
+
+        Game.TryExecuteAction(OwnerClientId, new CambioAction(CambioActionType.Discard, true, this, Game.DrawnCard));
+    }
+
+    private void HandCard_OnInteract(object sender, Interactable.InteractEventArgs e)
+    {
+        if (e.playerID != OwnerClientId) return;
+
+        DisableCardDrawnInteration();
+
+        PlayingCard cardChosen = (sender as Interactable).GetComponent<PlayingCard>();
+
+        Game.TryExecuteAction(OwnerClientId, new CambioAction(CambioActionType.TradeCard, true, this, new SwapInfo(Game.DrawnCard, cardChosen)));
+    }
+
+    #endregion
+
+    #endregion
+
+    #region Server Actions
+
+    //SERVER CALLED CAMBIO
+    public void CallCambio()
+    {
+        NotifyCallCambioClientRpc();
+    }
+
+    #endregion
+
+    #region Client Actions
+
+    [ClientRpc]
+    private void NotifyCallCambioClientRpc()
+    {
+        calledCambioText.gameObject.SetActive(true);
+    }
+
+    #endregion
+
+    #region Card Values
 
     /// <summary>
     /// Gets the value of the playing card
@@ -90,6 +216,8 @@ public class CambioPlayer : TablePlayer<CambioAction>
         foreach (var card in Hand.Cards) total += GetCardValue(card);
         return total;
     }
+
+    #endregion
 
     #region Card Position
 

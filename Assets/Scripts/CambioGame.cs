@@ -79,6 +79,43 @@ public class CambioGame : CardGame<CambioPlayer, CambioAction>
 
     }
 
+    public override void DrawCard(CambioPlayer player)
+    {
+        //Draw new card
+        drawnCard = GetNewCard();
+
+        // Position card in front of current player
+        BringCardToPlayer(currentPlayer, drawnCard, cardPullPositionOffset);
+
+        //Enable interaction for player or handle decision for AI
+        if (!player.IsAI) player.EnableCardDrawnInteraction();
+        else StartCoroutine(HandleAIDrawDecision());
+    }
+
+    #endregion
+
+    #region Card Management
+
+    /// <summary>
+    /// Shows a card to a player
+    /// </summary>
+    protected void BringCardToPlayer(TablePlayer<CambioAction> player, PlayingCard card, Vector3 offset)
+    {
+        // Move card above player, then apply offset (like reveal or pull position)
+        Vector3 targetPos = player.transform.position + offset;
+        card.MoveTo(targetPos, 5f);
+
+        // Rotate card to face upwards relative to player
+        Quaternion targetUpwardsRot = Quaternion.LookRotation(player.transform.forward, Vector3.up) * Quaternion.Euler(90f, 0f, 0);
+        card.RotateTo(targetUpwardsRot, 5f);
+    }
+
+
+    /// <summary>
+    /// Lifts a card up by a given height
+    /// </summary>
+    protected void LiftCard(PlayingCard card, float height) => card.MoveTo(card.transform.position + new Vector3(0, height, 0), 5f);
+
     #endregion
 
     #region Game Ended
@@ -125,22 +162,22 @@ public class CambioGame : CardGame<CambioPlayer, CambioAction>
         }
 
         yield return new WaitForSeconds(3f);
-        EndGame();
+        ServerEndGame();
     }
 
     #endregion
 
     #region Action Handling
 
-    public override IEnumerator TryExecuteAction(CambioAction action)
+    protected override IEnumerator ExecuteActionRoutine(CambioAction action)
     {
         if (!IsServer)
         {
-            Debug.LogWarning("Server must execute actions!");
+            Debug.LogWarning("[Client] Only the server can execute actions!");
             yield break;
         }
 
-        Debug.Log("[Server] Executing Action: " + action.Type);
+        Debug.Log($"[Server] Player {currentTurnClientId.Value} has executed Action: " + action.Type);
 
         yield return new WaitForSeconds(currentPlayer.IsAI ? AIThinkingTime : 0);
 
@@ -151,15 +188,15 @@ public class CambioGame : CardGame<CambioPlayer, CambioAction>
                 yield break;
 
             case CambioActionType.CallCambio:
-                //currentPlayer.CallCambio();
+                currentPlayer.CallCambio();
                 NextTurn();
                 yield break;
 
-            /*
             case CambioActionType.Draw:
                 DrawCard(currentPlayer);
                 break;
 
+            /*
             case CambioActionType.Discard:
                 PlaceCardOnPile(drawnCard);
 

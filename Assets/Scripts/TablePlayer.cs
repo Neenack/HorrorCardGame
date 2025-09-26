@@ -160,11 +160,19 @@ public abstract class TablePlayer<TAction> : NetworkBehaviour where TAction : cl
         hand.ClearHand();
         foreach (ulong cardId in handCardIds)
         {
-            if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(cardId, out NetworkObject cardObj))
-            {
-                hand.AddCard(cardObj.GetComponent<PlayingCard>());
-            }
+            PlayingCard card = GetPlayingCardFromID(cardId);
+            if (card) hand.AddCard(card);
         }
+    }
+
+    public PlayingCard GetPlayingCardFromID(ulong cardId)
+    {
+        if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(cardId, out NetworkObject cardObj))
+        {
+            return cardObj.GetComponent<PlayingCard>();
+        }
+
+        return null;
     }
 
 

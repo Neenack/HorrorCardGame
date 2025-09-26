@@ -1,8 +1,14 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using Unity.Netcode;
 using UnityEngine;
 
+
+public enum InteractMode
+{
+    Host, All
+}
 
 public class Interactable : NetworkBehaviour, IInteractable
 {
@@ -14,38 +20,42 @@ public class Interactable : NetworkBehaviour, IInteractable
         public InteractEventArgs(ulong playerID) { this.playerID = playerID; }
     }
 
-    private NetworkVariable<bool> canInteract = new NetworkVariable<bool>(true,
+    [SerializeField] private bool canInteract = true;
+
+    [SerializeField] private NetworkVariable<InteractMode> interactMode = new NetworkVariable<InteractMode>(
+        InteractMode.All,
+        NetworkVariableReadPermission.Everyone,
+        NetworkVariableWritePermission.Server);
+
+    [SerializeField] private NetworkVariable<NetworkString> interactableText = new NetworkVariable<NetworkString>(
+        "Interact",
         NetworkVariableReadPermission.Everyone,
         NetworkVariableWritePermission.Server);
 
 
-    [SerializeField] private string interactableText = "Interact";
+    /// <summary>
+    /// Returns the text display for interacting
+    /// </summary>
+    public string GetText() => interactableText.Value;
 
-    public string GetText() => interactableText;
-
-
-    // Only server can change text and sync to clients
-    public void SetText(string text)
-    {
-        if (!IsServer) return;
-
-        interactableText = text;
-        SetTextClientRpc(text);
-    }
-
-    [ClientRpc]
-    private void SetTextClientRpc(string text)
-    {
-        if (IsServer) return;
-
-        interactableText = text;
-    }
 
 
     /// <summary>
     /// Checks if a player can interact
     /// </summary>
-    public bool CanInteract() => canInteract.Value;
+    public bool CanInteract()
+    {
+        switch (interactMode.Value)
+        {
+            case InteractMode.All:
+                return canInteract;
+
+            case InteractMode.Host:
+                return canInteract && IsServer;
+        }
+
+        return false;
+    }
 
 
     /// <summary>
@@ -83,6 +93,26 @@ public class Interactable : NetworkBehaviour, IInteractable
     /// </summary>
     public void SetInteractable(bool interact)
     {
-        canInteract.Value = interact;
+        canInteract = interact;
+    }
+
+
+
+
+    /// <summary>
+    /// SERVER ONLY Set the interact text
+    /// </summary>
+    public void SetText(string text)
+    {
+        interactableText.Value = text;
+    }
+
+
+    /// <summary>
+    /// SERVER ONLY Set the interact mode for the interactable
+    /// </summary>
+    public void SetInteractMode(InteractMode mode)
+    {
+        interactMode.Value = mode;
     }
 }

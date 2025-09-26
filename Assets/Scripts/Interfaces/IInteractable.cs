@@ -9,6 +9,7 @@ public interface IInteractable
 
     public bool CanInteract();
     public void SetInteractable(bool interact);
+    public void SetInteractMode(InteractMode mode);
     public void Interact(ulong playerID);
     public string GetText();
     public void SetText(string text);

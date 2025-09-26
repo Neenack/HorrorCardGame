@@ -25,7 +25,7 @@ public abstract class CardGame<TPlayer, TAction> : NetworkBehaviour, ICardGame<T
         NetworkVariableWritePermission.Server
     );
     protected int currentTurnIndex = -1;
-    protected TablePlayer<TAction> currentPlayer;
+    protected TPlayer currentPlayer;
 
     protected NetworkVariable<GameState> gameState = new NetworkVariable<GameState>(
        GameState.WaitingToStart,
@@ -47,8 +47,10 @@ public abstract class CardGame<TPlayer, TAction> : NetworkBehaviour, ICardGame<T
     [SerializeField] protected float timeBetweenCardDeals = 0.5f;
     [SerializeField] private Transform cardSpawnTransform;
     [SerializeField] private Transform cardPileTransform;
+
     private CardDeck deck;
     private IInteractable interactableDeck;
+    protected PlayingCard drawnCard;
 
     [Header("AI")]
     [SerializeField] protected float AIThinkingTime = 1f;
@@ -61,6 +63,7 @@ public abstract class CardGame<TPlayer, TAction> : NetworkBehaviour, ICardGame<T
 
     public NetworkVariable<ulong> CurrentTurnID => currentTurnClientId;
     public PlayingCard TopPileCard => cardPile.Count > 0 ? cardPile[cardPile.Count - 1] : null;
+    public PlayingCard DrawnCard => drawnCard;
     public IInteractable InteractableDeck => interactableDeck;
     public IEnumerable<TablePlayer<TAction>> Players => players;
 
@@ -72,23 +75,25 @@ public abstract class CardGame<TPlayer, TAction> : NetworkBehaviour, ICardGame<T
     protected abstract IEnumerator DealInitialCards();
     protected abstract bool HasGameEnded();
     protected abstract IEnumerator ShowWinnerRoutine();
-    public abstract IEnumerator TryExecuteAction(TAction action);
+    protected abstract IEnumerator ExecuteActionRoutine(TAction action);
 
     #endregion
 
     private void Awake()
     {
         interactableDeck = GetComponentInChildren<IInteractable>();
+        interactableDeck.SetInteractable(true);
     }
 
     public override void OnNetworkSpawn()
     {
         if (IsServer)
         {
-            if (interactableDeck != null) interactableDeck.OnInteract += InteractableDeck_OnInteract;
+            if (interactableDeck != null)
+            {
+                interactableDeck.OnInteract += InteractableDeck_OnInteract;
+            }
         }
-
-        interactableDeck.SetInteractable(false);
 
         gameState.OnValueChanged += OnGameStateChanged;
     }
@@ -107,12 +112,11 @@ public abstract class CardGame<TPlayer, TAction> : NetworkBehaviour, ICardGame<T
         switch (newValue)
         {
             case GameState.Starting:
-                Debug.Log("Game started!");
-                OnGameStarted?.Invoke();
+                ClientStartGame();
                 break;
+
             case GameState.Ended:
-                Debug.Log("Game ended!");
-                OnGameEnded?.Invoke();
+                ClientEndGame();
                 break;
         }
     }
@@ -124,10 +128,10 @@ public abstract class CardGame<TPlayer, TAction> : NetworkBehaviour, ICardGame<T
     {
         if (gameState.Value != GameState.WaitingToStart) return;
 
-        StartGame();
+        ServerStartGame();
     }
 
-    private void StartGame()
+    private void ServerStartGame()
     {
         if (!IsServer) return;
 
@@ -144,7 +148,9 @@ public abstract class CardGame<TPlayer, TAction> : NetworkBehaviour, ICardGame<T
         deck = new CardDeck(deckSO);
         CardPooler.Instance.SetDeck(deck);
 
-        NotifyGameStartedClientRpc();
+        //Allow deck interact
+        interactableDeck.SetInteractMode(InteractMode.All);
+        interactableDeck.SetText("Pull Card");
 
         // Start dealing cards
         StartCoroutine(StartGameCoroutine());
@@ -157,20 +163,15 @@ public abstract class CardGame<TPlayer, TAction> : NetworkBehaviour, ICardGame<T
         gameState.Value = GameState.Playing;
 
         NextTurn();
-
-        yield return new WaitForSeconds(3f);
-
-        NextTurn();
     }
 
-    [ClientRpc]
-    private void NotifyGameStartedClientRpc()
+    private void ClientStartGame()
     {
-        foreach (var player in players)
-        {
-            interactableDeck.SetText("Pull Card");
-            interactableDeck.SetInteractable(false);
-        }
+        Debug.Log("Game started!");
+
+        interactableDeck.SetInteractable(false);
+
+        OnGameStarted?.Invoke();
     }
 
 
@@ -179,7 +180,7 @@ public abstract class CardGame<TPlayer, TAction> : NetworkBehaviour, ICardGame<T
     #region End Logic
 
 
-    protected void EndGame()
+    protected void ServerEndGame()
     {
         Debug.Log("[Server] Game Finished!");
 
@@ -190,7 +191,20 @@ public abstract class CardGame<TPlayer, TAction> : NetworkBehaviour, ICardGame<T
         cardPile.Clear();
         topPileCardId.Value = 0;
 
+        interactableDeck.SetText("Start Game");
+        interactableDeck.SetInteractMode(InteractMode.Host);
+
         gameState.Value = GameState.WaitingToStart;
+    }
+
+
+    private void ClientEndGame()
+    {
+        Debug.Log("Game ended!");
+
+        interactableDeck.SetInteractable(true);
+
+        OnGameEnded?.Invoke();
     }
 
     #endregion
@@ -231,23 +245,55 @@ public abstract class CardGame<TPlayer, TAction> : NetworkBehaviour, ICardGame<T
         }
     }
 
+    #region Requesting Actions
 
-
-    private IEnumerator HandleAITurn()
+    public void TryExecuteAction(ulong playerID, TAction action)
     {
-        yield return new WaitForSeconds(AIThinkingTime);
-        TryExecuteAction(currentPlayer.PlayerAI.DecideAction(TurnContext.StartTurn));
+        if (IsServer)
+        {
+            ServerTryExecuteAction(playerID, action);
+            return;
+        }
+
+        if (currentTurnClientId.Value != playerID)
+        {
+            Debug.LogWarning("[Client] It is not your turn to execute an action!");
+            return;
+        }
+
+        RequestExecuteActionServerRpc(playerID, action);
     }
+
+    [ServerRpc(RequireOwnership = false)]
+    private void RequestExecuteActionServerRpc(ulong playerID, TAction action)
+    {
+        ServerTryExecuteAction(playerID, action);
+    }
+
+    private void ServerTryExecuteAction(ulong playerID, TAction action)
+    {
+        if (currentTurnClientId.Value != playerID)
+        {
+            Debug.LogWarning($"[Server] Player {playerID} tried to execute an action out of turn!");
+            return;
+        }
+
+        StartCoroutine(ExecuteActionRoutine(action));
+    }
+
+    #endregion
 
     #endregion
 
     #region Card Management
 
+    protected PlayingCard GetNewCard() => CardPooler.Instance.GetCard(cardSpawnTransform.position);
+    public virtual void DrawCard(TPlayer player) => DealCardToPlayerHand(player);
     protected PlayingCard DealCardToPlayerHand(TPlayer player)
     {
         if (!IsServer) return null;
 
-        PlayingCard card = CardPooler.Instance.GetCard(cardSpawnTransform.position);
+        PlayingCard card = GetNewCard();
         if (card == null) return null;
 
         // Server adds card - this automatically syncs via NetworkList in TablePlayer
@@ -287,12 +333,31 @@ public abstract class CardGame<TPlayer, TAction> : NetworkBehaviour, ICardGame<T
 
     #endregion
 
+    #region Player AI
+
+    private IEnumerator HandleAITurn()
+    {
+        yield return new WaitForSeconds(AIThinkingTime);
+        StartCoroutine(ExecuteActionRoutine(currentPlayer.PlayerAI.DecideAction(TurnContext.StartTurn)));
+    }
+
+    protected IEnumerator HandleAIDrawDecision()
+    {
+        yield return new WaitForSeconds(AIThinkingTime);
+
+        TAction action = currentPlayer.PlayerAI.DecideAction(TurnContext.AfterDraw, drawnCard);
+        yield return StartCoroutine(ExecuteActionRoutine(action));
+    }
+
+    #endregion
 
     #region Helper Functions
 
 
 
     #endregion
+
+    #region Table Seater Interface
 
     public Transform TrySetPlayerAtTable(PlayerData playerData)
     {
@@ -309,4 +374,6 @@ public abstract class CardGame<TPlayer, TAction> : NetworkBehaviour, ICardGame<T
 
         return null;
     }
+
+    #endregion
 }
