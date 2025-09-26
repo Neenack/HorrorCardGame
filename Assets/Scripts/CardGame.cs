@@ -76,14 +76,19 @@ public abstract class CardGame<TPlayer, TAction> : NetworkBehaviour, ICardGame<T
 
     #endregion
 
-    public override void OnNetworkSpawn()
+    private void Awake()
     {
         interactableDeck = GetComponentInChildren<IInteractable>();
+    }
 
+    public override void OnNetworkSpawn()
+    {
         if (IsServer)
         {
             if (interactableDeck != null) interactableDeck.OnInteract += InteractableDeck_OnInteract;
         }
+
+        interactableDeck.SetInteractable(false);
 
         gameState.OnValueChanged += OnGameStateChanged;
     }
@@ -139,6 +144,8 @@ public abstract class CardGame<TPlayer, TAction> : NetworkBehaviour, ICardGame<T
         deck = new CardDeck(deckSO);
         CardPooler.Instance.SetDeck(deck);
 
+        NotifyGameStartedClientRpc();
+
         // Start dealing cards
         StartCoroutine(StartGameCoroutine());
     }
@@ -150,6 +157,20 @@ public abstract class CardGame<TPlayer, TAction> : NetworkBehaviour, ICardGame<T
         gameState.Value = GameState.Playing;
 
         NextTurn();
+
+        yield return new WaitForSeconds(3f);
+
+        NextTurn();
+    }
+
+    [ClientRpc]
+    private void NotifyGameStartedClientRpc()
+    {
+        foreach (var player in players)
+        {
+            interactableDeck.SetText("Pull Card");
+            interactableDeck.SetInteractable(false);
+        }
     }
 
 
@@ -280,6 +301,8 @@ public abstract class CardGame<TPlayer, TAction> : NetworkBehaviour, ICardGame<T
             if (player.IsAI)
             {
                 player.SetPlayer(playerData);
+                player.SetGame(this);
+
                 return player.PlayerStandTransform;
             }
         }

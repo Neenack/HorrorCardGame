@@ -3,13 +3,14 @@ using System.Linq;
 using TMPro;
 using Unity.Netcode;
 using UnityEngine;
+using UnityEngine.XR;
 
 public class CambioPlayer : TablePlayer<CambioAction>
 {
     private NetworkVariable<bool> hasPlayedLastTurn = new NetworkVariable<bool>(false);
 
     [Header("Cambio Settings")]
-    [SerializeField] private Interactable callRoundButton;
+    [SerializeField] private Interactable callCambioButton;
     [SerializeField] private Interactable skipAbilityButton;
     [SerializeField] private TextMeshPro scoreText;
     [SerializeField] private float rowSpacing = 2.5f;
@@ -23,20 +24,46 @@ public class CambioPlayer : TablePlayer<CambioAction>
 
     #endregion
 
-    #region Turns
-    public override void StartPlayerTurn()
+    public override void OnNetworkSpawn()
     {
-        if (!IsServer) return;
+        base.OnNetworkSpawn();
 
-        base.StartPlayerTurn();
+        callCambioButton.gameObject.SetActive(false);
     }
 
-    public override void EndPlayerTurn()
-    {
-        if (!IsServer) return;
 
+    #region Turns
+
+    protected override void Game_OnGameStarted()
+    {
+        base.Game_OnGameStarted();
+    }
+    protected override void Game_OnGameEnded()
+    {
+        base.Game_OnGameEnded();
+    }
+
+    protected override void StartPlayerTurn()
+    {
+        base.StartPlayerTurn();
+
+        callCambioButton.gameObject.SetActive(true);
+        Game.InteractableDeck.SetInteractable(true);
+    }
+
+    protected override void EndPlayerTurn()
+    {
         base.EndPlayerTurn();
 
+        callCambioButton.gameObject.SetActive(false);
+        Game.InteractableDeck.SetInteractable(false);
+
+        EndTurnServerRpc();
+    }
+
+    [ServerRpc(RequireOwnership = false)]
+    private void EndTurnServerRpc()
+    {
         hasPlayedLastTurn.Value = Game.Players.Any(p => !p.IsPlaying());
     }
 

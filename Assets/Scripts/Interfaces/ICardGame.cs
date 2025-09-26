@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using Unity.Netcode;
@@ -6,6 +7,9 @@ using UnityEngine.InputSystem.XR.Haptics;
 
 public interface ICardGame<TAction> where TAction : class
 {
+    event Action OnGameStarted;
+    event Action OnGameEnded;
+
     void NextTurn();
 
     IEnumerable<TablePlayer<TAction>> Players { get; }

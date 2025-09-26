@@ -79,12 +79,10 @@ public class Interactable : NetworkBehaviour, IInteractable
     }
 
     /// <summary>
-    /// Server-only: Enable or disable interactable globally
+    /// Enable or disable interactable
     /// </summary>
     public void SetInteractable(bool interact)
     {
-        if (!IsServer) return;
-
         canInteract.Value = interact;
     }
 }

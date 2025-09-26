@@ -54,6 +54,8 @@ public abstract class TablePlayer<TAction> : NetworkBehaviour where TAction : cl
         }
 
         handCardIds.OnListChanged += OnHandCardIdsChanged;
+
+        if (!IsServer && playerData != null) RequestOwnershipServerRpc();
     }
 
     public override void OnNetworkDespawn()
@@ -70,9 +72,42 @@ public abstract class TablePlayer<TAction> : NetworkBehaviour where TAction : cl
     /// <summary>
     /// Sets the player data for the table player
     /// </summary>
-    public void SetPlayer(PlayerData data) => playerData = data;
+    public void SetPlayer(PlayerData data)
+    {
+        playerData = data;
+
+        if (IsSpawned) RequestOwnershipServerRpc();
+    }
 
 
+    [ServerRpc(RequireOwnership = false)]
+    private void RequestOwnershipServerRpc()
+    {
+        if (playerData == null || OwnerClientId == playerData.OwnerClientId) return;
+
+        var netObj = GetComponent<NetworkObject>();
+        if (netObj.IsSpawned)
+        {
+            netObj.ChangeOwnership(playerData.OwnerClientId);
+            Debug.Log($"[Server] Changed ownership of {gameObject.name} to ID: {playerData.OwnerClientId}");
+        }
+    }
+
+
+    /// <summary>
+    /// Sets the game for the table player
+    /// </summary>
+    public void SetGame(ICardGame<TAction> game)
+    {
+        this.game = game;
+
+        game.CurrentTurnID.OnValueChanged += OnTurnChanged;
+        game.OnGameStarted += Game_OnGameStarted;
+        game.OnGameEnded += Game_OnGameEnded;
+    }
+
+
+    #region Player Starting and Ending Turn Logic
 
     /// <summary>
     /// Called when the turn changes for the game
@@ -81,15 +116,34 @@ public abstract class TablePlayer<TAction> : NetworkBehaviour where TAction : cl
     {
         if (IsAI) return;
 
-        if (NetworkManager.Singleton.LocalClientId != newValue) return;
-
-        Debug.Log($"Turn Changed from {oldValue} to {newValue}");
-        Debug.Log($"Local ID: {NetworkManager.Singleton.LocalClientId}    New Turn ID: {newValue}");
-
-        if (oldValue == playerData.OwnerClientId) EndPlayerTurn();
-        if (newValue == playerData.OwnerClientId) StartPlayerTurn();
+        if (NetworkManager.Singleton.LocalClientId == oldValue && oldValue == playerData.OwnerClientId) EndPlayerTurn();
+        if (NetworkManager.Singleton.LocalClientId == newValue && newValue == playerData.OwnerClientId) StartPlayerTurn();
     }
 
+    protected virtual void Game_OnGameEnded() { }
+    protected virtual void Game_OnGameStarted() { }
+
+    protected virtual void StartPlayerTurn()
+    {
+        Debug.Log($"{GetName()} Its your turn!");
+    }
+
+    protected virtual void EndPlayerTurn()
+    {
+        Debug.Log($"{GetName()} turn has ended");
+    }
+
+    #endregion
+
+
+    /// <summary>
+    /// Returns the players name
+    /// </summary>
+    public string GetName()
+    {
+        if (playerData) return playerData.GetName();
+        return "[AI] " + gameObject.name;
+    }
 
 
     /// <summary>
@@ -220,20 +274,4 @@ public abstract class TablePlayer<TAction> : NetworkBehaviour where TAction : cl
     }
 
     #endregion
-
-    public virtual void StartPlayerTurn()
-    {
-        Debug.Log($"{GetName()} Its your turn!");
-    }
-
-    public virtual void EndPlayerTurn()
-    {
-        Debug.Log($"{GetName()} turn has ended");
-    }
-
-    public string GetName()
-    {
-        if (playerData) return playerData.GetName();
-        return "[AI] " + gameObject.name;
-    }
 }
