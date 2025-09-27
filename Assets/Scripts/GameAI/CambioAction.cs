@@ -1,3 +1,5 @@
+using Unity.Netcode;
+
 public enum CambioActionType
 {
     None,
@@ -13,38 +15,25 @@ public enum CambioActionType
     Stack,
 }
 
-public class SwapInfo
-{
-    public PlayingCard Keep;
-    public PlayingCard Discard;
-    public SwapInfo(PlayingCard keep, PlayingCard discard)
-    {
-        Keep = keep;
-        Discard = discard;
-    }
-}
+[GenerateSerializationForType(typeof(CambioActionData))]
+public static class GeneratedCambioActionDataSerialization { }
 
-public class CambioAction
+public struct CambioActionData : INetworkSerializeByMemcpy
 {
-    public CambioActionType Type { get; private set; }
-    public bool EndsTurn { get; private set; } = false;
-    public PlayingCard TargetCard { get; private set; }
-    public CambioPlayer TargetPlayer { get; private set; }
-    public SwapInfo SwapData { get; private set; }
+    public CambioActionType Type;
+    public bool EndsTurn;
+    public ulong PlayerId;
+    public ulong CardId;
+    public ulong TargetPlayerId;
+    public ulong TargetCardId;
 
-    public CambioAction(CambioActionType type, bool endsTurn, CambioPlayer targetPlayer = null, PlayingCard targetCard = null)
+    public CambioActionData(CambioActionType type, bool endsTurn, ulong playerClientId, ulong cardNetworkId = 0, ulong targetPlayerClientId = 0, ulong targetCardNetworkId = 0)
     {
         Type = type;
         EndsTurn = endsTurn;
-        TargetPlayer = targetPlayer;
-        TargetCard = targetCard;
-    }
-
-    public CambioAction(CambioActionType type, bool endsTurn, CambioPlayer targetPlayer, SwapInfo swapInfo)
-    {
-        Type = type;
-        EndsTurn = endsTurn;
-        SwapData = swapInfo;
-        TargetPlayer = targetPlayer;
+        PlayerId = playerClientId;
+        CardId = cardNetworkId;
+        TargetPlayerId = targetPlayerClientId;
+        TargetCardId = targetCardNetworkId;
     }
 }

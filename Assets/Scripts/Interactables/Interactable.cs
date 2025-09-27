@@ -1,13 +1,14 @@
 using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using Unity.Collections;
 using Unity.Netcode;
 using UnityEngine;
 
 
 public enum InteractMode
 {
-    Host, All
+    All, Host
 }
 
 public class Interactable : NetworkBehaviour, IInteractable
@@ -22,21 +23,31 @@ public class Interactable : NetworkBehaviour, IInteractable
 
     [SerializeField] private bool canInteract = true;
 
-    [SerializeField] private NetworkVariable<InteractMode> interactMode = new NetworkVariable<InteractMode>(
-        InteractMode.All,
+    private NetworkVariable<InteractMode> interactMode;
+    private NetworkVariable<FixedString64Bytes> interactableText;
+
+    [SerializeField] private InteractMode defaultInteractMode;
+    [SerializeField] private string defaultText;
+
+
+    private void Awake()
+    {
+        interactableText = new NetworkVariable<FixedString64Bytes>(
+         new FixedString64Bytes(defaultText),
+         NetworkVariableReadPermission.Everyone,
+         NetworkVariableWritePermission.Server
+        );
+
+        interactMode = new NetworkVariable<InteractMode>(
+        defaultInteractMode,
         NetworkVariableReadPermission.Everyone,
         NetworkVariableWritePermission.Server);
-
-    [SerializeField] private NetworkVariable<NetworkString> interactableText = new NetworkVariable<NetworkString>(
-        "Interact",
-        NetworkVariableReadPermission.Everyone,
-        NetworkVariableWritePermission.Server);
-
+    }
 
     /// <summary>
     /// Returns the text display for interacting
     /// </summary>
-    public string GetText() => interactableText.Value;
+    public string GetText() => interactableText.Value.ToString();
 
 
 
@@ -93,6 +104,7 @@ public class Interactable : NetworkBehaviour, IInteractable
     /// </summary>
     public void SetInteractable(bool interact)
     {
+        Debug.Log($"{name} set interactable: {interact}");
         canInteract = interact;
     }
 

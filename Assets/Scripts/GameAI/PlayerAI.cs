@@ -10,11 +10,15 @@ public enum TurnContext
     AfterTurn
 }
 
-public abstract class PlayerAI<TAction> where TAction : class
+public abstract class PlayerAI<TPlayer, TAction, TAI>
+    where TPlayer : TablePlayer<TPlayer, TAction, TAI>
+    where TAction : struct
+    where TAI : PlayerAI<TPlayer, TAction, TAI>
 {
-    protected TablePlayer<TAction> player;
 
-    public PlayerAI(TablePlayer<TAction> playerRef)
+    protected TPlayer player;
+
+    public PlayerAI(TPlayer playerRef)
     {
         player = playerRef;
     }
@@ -23,12 +27,12 @@ public abstract class PlayerAI<TAction> where TAction : class
     /// Called when the AI needs to decide on an action with some new info (e.g., picked up card).
     /// Override as needed per game.
     /// </summary>
-    public abstract TAction DecideAction(TurnContext context, object extra = null);
+    public abstract TAction DecideAction(TurnContext context);
 
     /// <summary>
     /// Returns a random other player of the same type.
     /// </summary>
-    protected TablePlayer<TAction> GetRandomPlayer()
+    protected TPlayer GetRandomPlayer()
     {
         var playersToChoose = player.Game.Players
             .Where(p => !p.Equals(player))
@@ -40,7 +44,7 @@ public abstract class PlayerAI<TAction> where TAction : class
             return null;
         }
 
-        TablePlayer<TAction> randomPlayer = playersToChoose[UnityEngine.Random.Range(0, playersToChoose.Count)];
+        TPlayer randomPlayer = playersToChoose[UnityEngine.Random.Range(0, playersToChoose.Count)];
 
         return randomPlayer;
     }

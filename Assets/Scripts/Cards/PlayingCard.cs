@@ -40,6 +40,12 @@ public class PlayingCard : NetworkBehaviour
     private IInteractable interactable;
     public IInteractable Interactable => interactable;
 
+    #region Public Accessor
+
+    public bool IsMoving => moving;
+
+    #endregion
+
 
     private void Awake()
     {
@@ -78,6 +84,19 @@ public class PlayingCard : NetworkBehaviour
 
         this.cardSO = cardData;
         UpdateCardVisuals();
+    }
+
+    /// <summary>
+    /// Returns the playing card from a network ID
+    /// </summary>
+    public static PlayingCard GetPlayingCardFromNetworkID(ulong cardNetworkID)
+    {
+        if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(cardNetworkID, out NetworkObject cardObj))
+        {
+            return cardObj.GetComponent<PlayingCard>();
+        }
+
+        return null;
     }
 
     public void SetCard(PlayingCardSO card)

@@ -5,21 +5,21 @@ using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.InputSystem.XR.Haptics;
 
-public interface ICardGame<TAction> where TAction : class
+public interface ICardGame<TPlayer, TAction, TAI>
+    where TPlayer : TablePlayer<TPlayer, TAction, TAI>
+    where TAction : struct
+    where TAI : PlayerAI<TPlayer, TAction, TAI>
 {
     event Action OnGameStarted;
     event Action OnGameEnded;
 
-    void NextTurn();
-
-    IEnumerable<TablePlayer<TAction>> Players { get; }
+    IEnumerable<TPlayer> Players { get; }
     IInteractable InteractableDeck { get; }
-    PlayingCard TopPileCard { get; }
-    PlayingCard DrawnCard { get; }
-    NetworkVariable<ulong> CurrentTurnID { get; }
+    NetworkVariable<ulong> PileCardID { get; }
+    NetworkVariable<ulong> DrawnCardID { get; }
+    NetworkVariable<ulong> CurrentPlayerTurnID { get; }
+    NetworkVariable<ulong> CurrentOwnerClientTurnID { get; }
 
-
-    void PlaceCardOnPile(PlayingCard card, bool placeFaceDown = false, float lerpSpeed = 5f);
     void TryExecuteAction(ulong playerID, TAction action);
 
 }

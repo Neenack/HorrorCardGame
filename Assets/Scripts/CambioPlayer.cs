@@ -1,11 +1,16 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using TMPro;
+using Unity.Multiplayer.Playmode;
 using Unity.Netcode;
+using Unity.VisualScripting;
+using UnityEditor.ShaderKeywordFilter;
 using UnityEngine;
+using UnityEngine.UIElements;
 using UnityEngine.XR;
 
-public class CambioPlayer : TablePlayer<CambioAction>
+public class CambioPlayer : TablePlayer<CambioPlayer, CambioActionData, CambioPlayerAI>
 {
     private NetworkVariable<bool> hasPlayedLastTurn = new NetworkVariable<bool>(false);
 
@@ -92,18 +97,19 @@ public class CambioPlayer : TablePlayer<CambioAction>
     #region Interaction
 
     #region Start Of Turn Interaction
+
     private void CallCambioButton_OnInteract(object sender, Interactable.InteractEventArgs e)
     {
         DisableStartTurnInteraction();
 
-        Game.TryExecuteAction(OwnerClientId, new CambioAction(CambioActionType.CallCambio, true, this));
+        Game.TryExecuteAction(PlayerId, new CambioActionData(CambioActionType.CallCambio, true, PlayerId));
     }
 
     private void InteractableDeck_OnInteract(object sender, Interactable.InteractEventArgs e)
     {
         DisableStartTurnInteraction();
 
-        Game.TryExecuteAction(OwnerClientId, new CambioAction(CambioActionType.Draw, false, this));
+        Game.TryExecuteAction(PlayerId, new CambioActionData(CambioActionType.Draw, false, PlayerId));
     }
 
     private void EnableStartTurnInteraction()
@@ -125,51 +131,128 @@ public class CambioPlayer : TablePlayer<CambioAction>
 
     #region After Card Draw Interaction
 
-    public void EnableCardDrawnInteraction()
+    /// <summary>
+    /// Requests for the player to enable interactions for after drawing a card
+    /// </summary>
+    public void RequestEnableCardDrawnInteraction()
     {
-        PlayingCard drawnCard = Game.DrawnCard;
-        drawnCard.Interactable.SetInteractable(true);
-        drawnCard.Interactable.OnInteract += DrawnCard_OnInteract;
+        if (IsServer)
+        {
+            EnableCardDrawnInteractionClientRpc(PlayerData.OwnerClientId);
+            return;
+        }
+        EnableCardDrawnInteraction();
+    }
+
+    [ClientRpc]
+    private void EnableCardDrawnInteractionClientRpc(ulong localClientId)
+    {
+        if (PlayerData == null || localClientId != NetworkManager.Singleton.LocalClientId) return;
+
+        EnableCardDrawnInteraction();
+    }
+
+    private void EnableCardDrawnInteraction()
+    {
+        PlayingCard DrawnCard = PlayingCard.GetPlayingCardFromNetworkID(Game.DrawnCardID.Value);
+
+        DrawnCard.Interactable.SetInteractable(true);
+        DrawnCard.Interactable.OnInteract += DrawnCard_OnInteract;
 
         foreach (var cardId in handCardIds)
         {
-            PlayingCard card = GetPlayingCardFromID(cardId);
+            PlayingCard card = PlayingCard.GetPlayingCardFromNetworkID(cardId);
+            card.Interactable.SetInteractable(true);
             card.Interactable.OnInteract += HandCard_OnInteract;
         }
     }
 
     private void DisableCardDrawnInteration()
     {
-        PlayingCard drawnCard = Game.DrawnCard;
-        drawnCard.Interactable.SetInteractable(false);
-        drawnCard.Interactable.OnInteract -= DrawnCard_OnInteract;
+        PlayingCard DrawnCard = PlayingCard.GetPlayingCardFromNetworkID(Game.DrawnCardID.Value);
+
+        DrawnCard.Interactable.SetInteractable(false);
+        DrawnCard.Interactable.OnInteract -= DrawnCard_OnInteract;
 
         foreach (var cardId in handCardIds)
         {
-            PlayingCard card = GetPlayingCardFromID(cardId);
+            PlayingCard card = PlayingCard.GetPlayingCardFromNetworkID(cardId);
+            card.Interactable.SetInteractable(false);
             card.Interactable.OnInteract -= HandCard_OnInteract;
         }
     }
 
     private void DrawnCard_OnInteract(object sender, Interactable.InteractEventArgs e)
     {
-        if (e.playerID != OwnerClientId) return;
-
         DisableCardDrawnInteration();
 
-        Game.TryExecuteAction(OwnerClientId, new CambioAction(CambioActionType.Discard, true, this, Game.DrawnCard));
+        Game.TryExecuteAction(PlayerId, new CambioActionData(CambioActionType.Discard, true, PlayerId, Game.DrawnCardID.Value));
     }
 
     private void HandCard_OnInteract(object sender, Interactable.InteractEventArgs e)
     {
-        if (e.playerID != OwnerClientId) return;
-
         DisableCardDrawnInteration();
 
-        PlayingCard cardChosen = (sender as Interactable).GetComponent<PlayingCard>();
+        PlayingCard cardToRemove = (sender as Interactable).GetComponent<PlayingCard>();
 
-        Game.TryExecuteAction(OwnerClientId, new CambioAction(CambioActionType.TradeCard, true, this, new SwapInfo(Game.DrawnCard, cardChosen)));
+        Game.TryExecuteAction(PlayerId, new CambioActionData(CambioActionType.TradeCard, true, PlayerId, cardToRemove.NetworkObjectId, PlayerId, Game.DrawnCardID.Value));
     }
+
+    #endregion
+
+    #region Ability Interaction
+
+    #region Start Ability
+
+    /// <summary>
+    /// Requests for the player to enable interactions for starting an ability
+    /// </summary>
+    public void RequestEnableAbilityStartedInteraction()
+    {
+        if (IsServer)
+        {
+            EnableAbilityStartedInteractionClientRpc(PlayerData.OwnerClientId);
+            return;
+        }
+        EnableAbilityStartedInteraction();
+    }
+
+    [ClientRpc]
+    private void EnableAbilityStartedInteractionClientRpc(ulong localClientId)
+    {
+        if (PlayerData == null || localClientId != NetworkManager.Singleton.LocalClientId) return;
+
+        EnableAbilityStartedInteraction();
+    }
+
+    private void EnableAbilityStartedInteraction()
+    {
+        skipAbilityButton.gameObject.SetActive(true);
+        skipAbilityButton.SetInteractable(true);
+        skipAbilityButton.OnInteract += SkipAbilityButton_OnInteract;
+    }
+
+    private void DisableAbilityStartedInteraction()
+    {
+        skipAbilityButton.SetInteractable(false);
+        skipAbilityButton.gameObject.SetActive(false);
+        skipAbilityButton.OnInteract -= SkipAbilityButton_OnInteract;
+    }
+
+    private void SkipAbilityButton_OnInteract(object sender, Interactable.InteractEventArgs e)
+    {
+        DisableAbilityStartedInteraction();
+
+        Game.TryExecuteAction(PlayerId, new CambioActionData(CambioActionType.None, true, PlayerId));
+    }
+
+    #endregion
+
+    #region Ability Subscriptions
+
+
+
+    #endregion
 
     #endregion
 
@@ -270,6 +353,12 @@ public class CambioPlayer : TablePlayer<CambioAction>
     {
         seenCards.Remove(card);
     }
+
+    #endregion
+
+    #region AI
+
+    protected override CambioPlayerAI CreateAI() => playerAI = new CambioPlayerAI(this);
 
     #endregion
 }

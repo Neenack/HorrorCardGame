@@ -2,128 +2,134 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
-public class CambioPlayerAI : PlayerAI<CambioAction>
+public class CambioPlayerAI : PlayerAI<CambioPlayer, CambioActionData, CambioPlayerAI>
 {
     private CambioPlayer cambioPlayer;
 
     public CambioPlayerAI(CambioPlayer playerRef) : base(playerRef) 
     { 
-        cambioPlayer = playerRef as CambioPlayer;
+        cambioPlayer = playerRef;
     }
 
-    public override CambioAction DecideAction(TurnContext context, object sender = null)
+    public override CambioActionData DecideAction(TurnContext context)
     {
         UnityEngine.Debug.Log("Action Requested: " + context.ToString());
 
         return context switch
         {
             TurnContext.StartTurn => StartTurn(),
-            TurnContext.AfterDraw => AfterDraw(sender as PlayingCard),
-            TurnContext.CardAbility => CardAbility(sender as PlayingCard),
+            TurnContext.AfterDraw => AfterDraw(),
+            TurnContext.CardAbility => CardAbility(),
             TurnContext.AfterTurn => AfterTurn(),
-            _ => new CambioAction(CambioActionType.None, true)
+            _ => new CambioActionData(CambioActionType.None, true, player.PlayerId)
         };
     }
 
-    private CambioAction StartTurn()
+    private CambioActionData StartTurn()
     {
         if (ShouldCallCambio())
         {
-            return new CambioAction(CambioActionType.CallCambio, true);
+            return new CambioActionData(CambioActionType.CallCambio, true, player.PlayerId);
         }
 
-        return new CambioAction(CambioActionType.Draw, false);
+        return new CambioActionData(CambioActionType.Draw, false, player.PlayerId);
     }
 
-    private CambioAction AfterDraw(PlayingCard drawnCard)
+    private CambioActionData AfterDraw()
     {
-        if (drawnCard == null)
+        PlayingCard DrawnCard = PlayingCard.GetPlayingCardFromNetworkID(player.Game.DrawnCardID.Value);
+
+        if (DrawnCard == null)
         {
-            return new CambioAction(CambioActionType.None, true);
+            return new CambioActionData(CambioActionType.None, true, player.PlayerId);
         }
 
-        int cardValue = player.GetCardValue(drawnCard);
+        int cardValue = player.GetCardValue(DrawnCard);
 
         //If card is above 5, discard
         if (cardValue > 5)
         {
-            return new CambioAction(CambioActionType.Discard, cardValue < 6, cambioPlayer, drawnCard);
+            return new CambioActionData(CambioActionType.Discard, cardValue < 6, player.PlayerId, DrawnCard.NetworkObjectId);
         }
 
         //If AI has not seen all of its cards then swap
         // OR
         //If card is larger than highest known card then swap
         if (cambioPlayer.SeenCards.Count < player.Hand.Cards.Count
-            || player.GetCardValue(GetHighestSeenCard()) > player.GetCardValue(drawnCard))
+            || player.GetCardValue(GetHighestSeenCard()) > player.GetCardValue(DrawnCard))
         {
-            PlayingCard cardToSwap = GetCardtoSwap();
+            PlayingCard cardToRemove = GetCardtoSwap();
 
-            return new CambioAction(CambioActionType.TradeCard, true, cambioPlayer, new SwapInfo(drawnCard, cardToSwap));
+            return new CambioActionData(CambioActionType.TradeCard, true, player.PlayerId, cardToRemove.NetworkObjectId, player.PlayerId, DrawnCard.NetworkObjectId);
         }
 
         //Discard
-        return new CambioAction(CambioActionType.Discard, cardValue < 6, cambioPlayer, drawnCard);
+        return new CambioActionData(CambioActionType.Discard, cardValue < 6, player.PlayerId, DrawnCard.NetworkObjectId);
     }
 
-    private CambioAction CardAbility(PlayingCard abilityCard)
+    private CambioActionData CardAbility()
     {
-        if (abilityCard == null) return new CambioAction(CambioActionType.None, true);
+        PlayingCard AbilityCard = PlayingCard.GetPlayingCardFromNetworkID(player.Game.PileCardID.Value);
 
-        int cardValue = cambioPlayer.GetCardValue(abilityCard);
-        if (cardValue < 6) return new CambioAction(CambioActionType.None, true);
+        if (AbilityCard == null) return new CambioActionData(CambioActionType.None, true, player.PlayerId);
+
+        int cardValue = cambioPlayer.GetCardValue(AbilityCard);
+        if (cardValue < 6) return new CambioActionData(CambioActionType.None, true, player.PlayerId);
 
         switch (cardValue)
         {
             case 6:
             case 7: //LOOK AT YOUR OWN CARD
-                return new CambioAction(CambioActionType.RevealCard, true, cambioPlayer, GetCardToReveal());
+                PlayingCard cardToReveal = GetCardToReveal();
+                return new CambioActionData(CambioActionType.RevealCard, true, player.PlayerId, cardToReveal.NetworkObjectId);
 
             case 8:
             case 9: //LOOK AT ANOTHER CARD
-                CambioPlayer randomPlayer = GetRandomPlayer() as CambioPlayer;
-                return new CambioAction(CambioActionType.RevealCard, true, randomPlayer, GetRandomCard(randomPlayer));
+                CambioPlayer randomPlayer = GetRandomPlayer();
+                PlayingCard randomCard = GetRandomCard(randomPlayer);
+                return new CambioActionData(CambioActionType.RevealCard, true, player.PlayerId, 0, randomPlayer.PlayerId, randomCard.NetworkObjectId);
 
             case 10: //SWAP HANDS
                 if (ShouldSwapHand())
                 {
-                    return new CambioAction(CambioActionType.SwapHand, true, GetRandomPlayer() as CambioPlayer);
+                    return new CambioActionData(CambioActionType.SwapHand, true, player.PlayerId, 0, GetRandomPlayer().OwnerClientId, 0);
                 }
                 Debug.Log("AI: Chose not to swap");
                 break;
 
             case 11: //COMPARE 2 AND CHOOSE 1 TO KEEP
-                CambioPlayer otherPlayer = GetRandomPlayer() as CambioPlayer;
-                return new CambioAction(CambioActionType.CompareCards, false, otherPlayer, new SwapInfo(GetRandomCard(otherPlayer), GetCardtoSwap()));
+                CambioPlayer otherPlayer = GetRandomPlayer();
+                return new CambioActionData(CambioActionType.CompareCards, false, player.PlayerId, GetCardtoSwap().NetworkObjectId, otherPlayer.PlayerId, GetRandomCard(otherPlayer).NetworkObjectId);
 
             case 12: //BLIND SWAP
                 if (ShouldBlindSwap())
                 {
-                    otherPlayer = GetRandomPlayer() as CambioPlayer;
-                    return new CambioAction(CambioActionType.SwapCard, true, otherPlayer, new SwapInfo(GetRandomCard(otherPlayer), GetCardtoSwap()));
+                    otherPlayer = GetRandomPlayer();
+                    return new CambioActionData(CambioActionType.SwapCard, true, player.PlayerId, GetCardtoSwap().NetworkObjectId, otherPlayer.PlayerId, GetRandomCard(otherPlayer).NetworkObjectId);
                 }
                 Debug.Log("Chose not to swap");
                 break;
 
             case 13: //RED KING REVEAL WHOLE HAND
-                if (abilityCard.Suit == Suit.Diamonds || abilityCard.Suit == Suit.Hearts)
+                if (AbilityCard.Suit == Suit.Diamonds || AbilityCard.Suit == Suit.Hearts)
                 {
                     //Debug.Log("AI: Reveal whole hand");
-                    return new CambioAction(CambioActionType.RevealHand, false);
+                    return new CambioActionData(CambioActionType.RevealHand, false, player.PlayerId);
                 }
                 break;
         }
 
-        return new CambioAction(CambioActionType.None, true);
+        return new CambioActionData(CambioActionType.None, true, player.PlayerId);
     }
 
-    private CambioAction AfterTurn()
+    private CambioActionData AfterTurn()
     {
         if (CanStack())
         {
-            return new CambioAction(CambioActionType.Stack, false, cambioPlayer, GetCardToStack());
+            return new CambioActionData(CambioActionType.Stack, false, player.PlayerId, GetCardToStack().NetworkObjectId);
         }
 
-        return new CambioAction(CambioActionType.None, false);
+        return new CambioActionData(CambioActionType.None, false, player.PlayerId);
     }
 
 
@@ -217,7 +223,7 @@ public class CambioPlayerAI : PlayerAI<CambioAction>
 
     public bool CanStack()
     {
-        PlayingCard topCard = player.Game.TopPileCard;
+        PlayingCard topCard = PlayingCard.GetPlayingCardFromNetworkID(player.Game.DrawnCardID.Value);
 
         foreach (var card in cambioPlayer.SeenCards)
         {
@@ -239,7 +245,7 @@ public class CambioPlayerAI : PlayerAI<CambioAction>
     /// <returns>Playing card</returns>
     public PlayingCard GetCardToStack()
     {
-        PlayingCard topCard = player.Game.TopPileCard;
+        PlayingCard topCard = PlayingCard.GetPlayingCardFromNetworkID(player.Game.PileCardID.Value);
 
         foreach (var card in cambioPlayer.SeenCards)
         {

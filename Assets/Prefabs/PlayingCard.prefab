@@ -104,7 +104,7 @@ GameObject:
   - component: {fileID: 3530578228374952461}
   - component: {fileID: 1255568555767963813}
   - component: {fileID: 6516650762836639599}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: PlayingCard
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -213,8 +213,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Interactable
   ShowTopMostFoldoutHeaderGroup: 1
-  interactableText: Interact
-  interactMode: 0
+  canInteract: 0
+  defaultInteractMode: 0
+  defaultText: 
 --- !u!1 &7254574460917153184
 GameObject:
   m_ObjectHideFlags: 0

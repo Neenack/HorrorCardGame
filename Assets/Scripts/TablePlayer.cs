@@ -1,19 +1,31 @@
+using System;
 using System.Collections.Generic;
 using Unity.Netcode;
+using Unity.VisualScripting;
 using UnityEngine;
+using static Interactable;
 
-public abstract class TablePlayer<TAction> : NetworkBehaviour where TAction : class
+public abstract class TablePlayer<TPlayer, TAction, TAI> : NetworkBehaviour
+    where TPlayer : TablePlayer<TPlayer, TAction, TAI>
+    where TAction : struct
+    where TAI : PlayerAI<TPlayer, TAction, TAI>
 {
+    protected NetworkVariable<ulong> tablePlayerId = new NetworkVariable<ulong>(
+       ulong.MaxValue,
+       NetworkVariableReadPermission.Everyone,
+       NetworkVariableWritePermission.Server
+    );
+
     private PlayerData playerData = null;
-    private ICardGame<TAction> game;
+    private ICardGame<TPlayer, TAction, TAI> game;
 
     //Server hand
     private PlayerHand hand;
     //Client hand
     public NetworkList<ulong> handCardIds = new NetworkList<ulong>();
 
-
-    private PlayerAI<TAction> playerAI = null;
+    protected TAI playerAI = null;
+    private bool isTurn = false;
 
     [Header("Player")]
     [SerializeField] private Transform playerStandTransform;
@@ -29,10 +41,10 @@ public abstract class TablePlayer<TAction> : NetworkBehaviour where TAction : cl
 
     public bool IsAI => playerData == null;
     public PlayerData PlayerData => playerData;
-    protected bool isTurn => game?.CurrentTurnID.Value == OwnerClientId;
-    public ICardGame<TAction> Game => game;
+    public ICardGame<TPlayer, TAction, TAI> Game => game;
     public PlayerHand Hand => hand;
-    public PlayerAI<TAction> PlayerAI => playerAI;
+    public TAI PlayerAI => playerAI;
+    public ulong PlayerId => tablePlayerId.Value;
     public Transform PlayerStandTransform => playerStandTransform;
 
     #endregion
@@ -42,6 +54,7 @@ public abstract class TablePlayer<TAction> : NetworkBehaviour where TAction : cl
     public abstract int GetCardValue(PlayingCard card);
     public abstract bool IsPlaying();
     public abstract int GetScore();
+    protected abstract TAI CreateAI();
 
     #endregion
 
@@ -55,7 +68,8 @@ public abstract class TablePlayer<TAction> : NetworkBehaviour where TAction : cl
 
         handCardIds.OnListChanged += OnHandCardIdsChanged;
 
-        if (!IsServer && playerData != null) RequestOwnershipServerRpc();
+        //if (!IsServer && playerData != null) RequestOwnershipServerRpc();
+        if (IsServer) AssignTablePlayerID();
     }
 
     public override void OnNetworkDespawn()
@@ -64,8 +78,15 @@ public abstract class TablePlayer<TAction> : NetworkBehaviour where TAction : cl
 
         //Unsubscribes from events
         if (hand != null) hand.OnHandUpdated -= Hand_OnHandUpdated;
-        if (game != null) game.CurrentTurnID.OnValueChanged -= OnTurnChanged;
+        if (game != null) game.CurrentPlayerTurnID.OnValueChanged -= OnTurnChanged;
         if (handCardIds != null) handCardIds.OnListChanged -= OnHandCardIdsChanged;
+    }
+
+    private void AssignTablePlayerID()
+    {
+        byte[] buffer = new byte[8];
+        new System.Random().NextBytes(buffer);
+        tablePlayerId.Value = System.BitConverter.ToUInt64(buffer, 0);
     }
 
 
@@ -76,7 +97,7 @@ public abstract class TablePlayer<TAction> : NetworkBehaviour where TAction : cl
     {
         playerData = data;
 
-        if (IsSpawned) RequestOwnershipServerRpc();
+        //if (IsSpawned) RequestOwnershipServerRpc();
     }
 
 
@@ -89,7 +110,7 @@ public abstract class TablePlayer<TAction> : NetworkBehaviour where TAction : cl
         if (netObj.IsSpawned)
         {
             netObj.ChangeOwnership(playerData.OwnerClientId);
-            Debug.Log($"[Server] Changed ownership of {gameObject.name} to ID: {playerData.OwnerClientId}");
+            Debug.Log($"[Server] Changed ownership of {gameObject.name} (ID:{tablePlayerId.Value}) to Owner ID: {playerData.OwnerClientId}");
         }
     }
 
@@ -97,13 +118,15 @@ public abstract class TablePlayer<TAction> : NetworkBehaviour where TAction : cl
     /// <summary>
     /// Sets the game for the table player
     /// </summary>
-    public void SetGame(ICardGame<TAction> game)
+    public void SetGame(ICardGame<TPlayer, TAction, TAI> game)
     {
         this.game = game;
 
-        game.CurrentTurnID.OnValueChanged += OnTurnChanged;
+        game.CurrentPlayerTurnID.OnValueChanged += OnTurnChanged;
         game.OnGameStarted += Game_OnGameStarted;
         game.OnGameEnded += Game_OnGameEnded;
+
+        CreateAI();
     }
 
 
@@ -116,8 +139,17 @@ public abstract class TablePlayer<TAction> : NetworkBehaviour where TAction : cl
     {
         if (IsAI) return;
 
-        if (NetworkManager.Singleton.LocalClientId == oldValue && oldValue == playerData.OwnerClientId) EndPlayerTurn();
-        if (NetworkManager.Singleton.LocalClientId == newValue && newValue == playerData.OwnerClientId) StartPlayerTurn();
+        //Debug.Log($"[Client] {gameObject.name} (ID:{tablePlayerId.Value}) is running on client: {NetworkManager.Singleton.LocalClientId} and the current turn owner id is: {game.CurrentOwnerClientTurnID.Value}");
+
+        if (oldValue == PlayerId && isTurn)
+        {
+            EndPlayerTurn();
+        }
+
+        if (newValue == PlayerId && game.CurrentOwnerClientTurnID.Value == NetworkManager.Singleton.LocalClientId)
+        {
+            StartPlayerTurn();
+        }
     }
 
     protected virtual void Game_OnGameEnded() { }
@@ -125,11 +157,13 @@ public abstract class TablePlayer<TAction> : NetworkBehaviour where TAction : cl
 
     protected virtual void StartPlayerTurn()
     {
+        isTurn = true;
         Debug.Log($"{GetName()} Its your turn!");
     }
 
     protected virtual void EndPlayerTurn()
     {
+        isTurn = false;
         Debug.Log($"{GetName()} turn has ended");
     }
 
@@ -160,21 +194,31 @@ public abstract class TablePlayer<TAction> : NetworkBehaviour where TAction : cl
         hand.ClearHand();
         foreach (ulong cardId in handCardIds)
         {
-            PlayingCard card = GetPlayingCardFromID(cardId);
+            PlayingCard card = PlayingCard.GetPlayingCardFromNetworkID(cardId);
             if (card) hand.AddCard(card);
         }
     }
 
-    public PlayingCard GetPlayingCardFromID(ulong cardId)
-    {
-        if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(cardId, out NetworkObject cardObj))
-        {
-            return cardObj.GetComponent<PlayingCard>();
-        }
+    #region Player Interaction
 
-        return null;
+    public void SetHandInteractable(bool interactable, EventHandler<InteractEventArgs> OnInteract = null)
+    {
+        foreach (ulong cardId in handCardIds)
+        {
+            PlayingCard card = PlayingCard.GetPlayingCardFromNetworkID(cardId);
+            if (card)
+            {
+                card.Interactable.SetInteractable(interactable);
+                if (OnInteract != null)
+                {
+                    if (interactable) card.Interactable.OnInteract += OnInteract;
+                    else card.Interactable.OnInteract -= OnInteract;
+                }
+            }
+        }
     }
 
+    #endregion
 
     #region Card Handling (Server)
 
@@ -202,16 +246,18 @@ public abstract class TablePlayer<TAction> : NetworkBehaviour where TAction : cl
         handCardIds.Insert(index, card.NetworkObjectId);
     }
 
-    public void RemoveCardFromHand(PlayingCard card)
+    public bool RemoveCardFromHand(PlayingCard card)
     {
         if (!IsServer)
         {
             Debug.LogWarning($"Only the server can remove {card.ToString()} from {GetName()}'s hand!");
-            return;
+            return false;
         }
 
         bool removed = hand.RemoveCard(card);
         if (removed) handCardIds.Remove(card.NetworkObjectId);
+
+        return removed;
     }
 
     protected virtual void Hand_OnHandUpdated()

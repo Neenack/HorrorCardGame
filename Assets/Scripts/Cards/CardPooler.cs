@@ -98,12 +98,6 @@ public class CardPooler : NetworkSingleton<CardPooler>
         // Hide the card
         card.transform.position = poolPosition;
 
-        // Disable interactions
-        if (card.Interactable != null)
-        {
-            card.Interactable.SetInteractable(false);
-        }
-
         card.gameObject.SetActive(false);
 
         UpdateCardTransformClientRpc(card.NetworkObjectId, card.transform.position, false);

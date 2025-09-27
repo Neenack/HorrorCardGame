@@ -84,10 +84,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Interactable
   ShowTopMostFoldoutHeaderGroup: 1
-  canInteract:
-    m_InternalValue: 1
-  interactMode:
-    m_InternalValue: 0
+  canInteract: 1
+  defaultInteractMode: 1
+  defaultText: Start Game
 --- !u!65 &6093817906105924536
 BoxCollider:
   m_ObjectHideFlags: 0

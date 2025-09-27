@@ -14,16 +14,26 @@ public enum GameState
     Ended
 }
 
-public abstract class CardGame<TPlayer, TAction> : NetworkBehaviour, ICardGame<TAction>, ITable where TPlayer : TablePlayer<TAction> where TAction : class
+public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardGame<TPlayer, TAction, TAI>, ITable
+    where TPlayer : TablePlayer<TPlayer, TAction, TAI>
+    where TAction : struct
+    where TAI : PlayerAI<TPlayer, TAction, TAI>
 {
     public event Action OnGameStarted;
     public event Action OnGameEnded;
 
-    protected NetworkVariable<ulong> currentTurnClientId = new NetworkVariable<ulong>(
+    protected NetworkVariable<ulong> currentPlayerTurnId = new NetworkVariable<ulong>(
         ulong.MaxValue,
         NetworkVariableReadPermission.Everyone,
         NetworkVariableWritePermission.Server
     );
+
+    protected NetworkVariable<ulong> currentOwnerClientTurnId = new NetworkVariable<ulong>(
+        ulong.MaxValue,
+        NetworkVariableReadPermission.Everyone,
+        NetworkVariableWritePermission.Server
+    );
+
     protected int currentTurnIndex = -1;
     protected TPlayer currentPlayer;
 
@@ -39,33 +49,40 @@ public abstract class CardGame<TPlayer, TAction> : NetworkBehaviour, ICardGame<T
         NetworkVariableWritePermission.Server
     );
 
+    protected NetworkVariable<ulong> drawnCardId = new NetworkVariable<ulong>(
+        default,
+        NetworkVariableReadPermission.Everyone,
+        NetworkVariableWritePermission.Server
+    );
+
     [Header("Seats")]
     [SerializeField] protected List<TPlayer> players = new List<TPlayer>();
 
     [Header("Deck Settings")]
     [SerializeField] private CardDeckSO deckSO;
     [SerializeField] protected float timeBetweenCardDeals = 0.5f;
-    [SerializeField] private Transform cardSpawnTransform;
+    [SerializeField] protected Transform cardSpawnTransform;
     [SerializeField] private Transform cardPileTransform;
 
     private CardDeck deck;
     private IInteractable interactableDeck;
-    protected PlayingCard drawnCard;
 
     [Header("AI")]
     [SerializeField] protected float AIThinkingTime = 1f;
 
 
     // Server-only game state
-    private List<PlayingCard> cardPile = new List<PlayingCard>();
+    protected List<PlayingCard> cardPile = new List<PlayingCard>();
+    protected PlayingCard drawnCard;
 
     #region Public Accessors
 
-    public NetworkVariable<ulong> CurrentTurnID => currentTurnClientId;
-    public PlayingCard TopPileCard => cardPile.Count > 0 ? cardPile[cardPile.Count - 1] : null;
-    public PlayingCard DrawnCard => drawnCard;
+    public NetworkVariable<ulong> CurrentPlayerTurnID => currentPlayerTurnId;
+    public NetworkVariable<ulong> CurrentOwnerClientTurnID => currentOwnerClientTurnId;
+    public NetworkVariable<ulong> PileCardID => topPileCardId;
+    public NetworkVariable<ulong> DrawnCardID => drawnCardId;
     public IInteractable InteractableDeck => interactableDeck;
-    public IEnumerable<TablePlayer<TAction>> Players => players;
+    public IEnumerable<TPlayer> Players => players;
 
 
     #endregion
@@ -142,7 +159,6 @@ public abstract class CardGame<TPlayer, TAction> : NetworkBehaviour, ICardGame<T
 
         //Set current turn to default
         currentTurnIndex = -1;
-        currentTurnClientId.Value = ulong.MaxValue;
 
         //Initialise Deck
         deck = new CardDeck(deckSO);
@@ -151,6 +167,9 @@ public abstract class CardGame<TPlayer, TAction> : NetworkBehaviour, ICardGame<T
         //Allow deck interact
         interactableDeck.SetInteractMode(InteractMode.All);
         interactableDeck.SetText("Pull Card");
+
+        //Setup AI players on the server
+        foreach (var player in players) if (player.IsAI) player.SetGame(this);
 
         // Start dealing cards
         StartCoroutine(StartGameCoroutine());
@@ -211,9 +230,11 @@ public abstract class CardGame<TPlayer, TAction> : NetworkBehaviour, ICardGame<T
 
     #region Playing Logic
 
-    public virtual void NextTurn()
+    protected void NextTurn() => StartCoroutine(NextTurnRoutine());
+
+    protected virtual IEnumerator NextTurnRoutine()
     {
-        if (!IsServer) return;
+        if (!IsServer) yield break;
 
         int attempts = 0;
         do
@@ -227,21 +248,26 @@ public abstract class CardGame<TPlayer, TAction> : NetworkBehaviour, ICardGame<T
         if (attempts > players.Count || HasGameEnded())
         {
             StartCoroutine(ShowWinnerRoutine());
-            return;
+            yield break;
         }
+
+        //Set owner client id so only the given client will recieve the input
+        currentOwnerClientTurnId.Value = currentPlayer.PlayerData.OwnerClientId;
+
+        yield return new WaitForSeconds(1f);
+
+
+        //change the turn id
+        currentPlayerTurnId.Value = currentPlayer.PlayerId;
 
         if (currentPlayer.IsAI)
         {
             Debug.Log($"[Server] AI turn!");
-
-            currentTurnClientId.Value = ulong.MaxValue;
             StartCoroutine(HandleAITurn());
         }
         else
         {
-            Debug.Log($"[Server] {currentPlayer.PlayerData.OwnerClientId} turn!");
-
-            currentTurnClientId.Value = currentPlayer.PlayerData.OwnerClientId;
+            Debug.Log($"[Server] {currentPlayer.PlayerId} turn!");
         }
     }
 
@@ -255,7 +281,7 @@ public abstract class CardGame<TPlayer, TAction> : NetworkBehaviour, ICardGame<T
             return;
         }
 
-        if (currentTurnClientId.Value != playerID)
+        if (currentPlayerTurnId.Value != playerID)
         {
             Debug.LogWarning("[Client] It is not your turn to execute an action!");
             return;
@@ -272,7 +298,7 @@ public abstract class CardGame<TPlayer, TAction> : NetworkBehaviour, ICardGame<T
 
     private void ServerTryExecuteAction(ulong playerID, TAction action)
     {
-        if (currentTurnClientId.Value != playerID)
+        if (currentPlayerTurnId.Value != playerID)
         {
             Debug.LogWarning($"[Server] Player {playerID} tried to execute an action out of turn!");
             return;
@@ -287,19 +313,27 @@ public abstract class CardGame<TPlayer, TAction> : NetworkBehaviour, ICardGame<T
 
     #region Card Management
 
-    protected PlayingCard GetNewCard() => CardPooler.Instance.GetCard(cardSpawnTransform.position);
-    public virtual void DrawCard(TPlayer player) => DealCardToPlayerHand(player);
-    protected PlayingCard DealCardToPlayerHand(TPlayer player)
+    protected PlayingCard DrawCard()
     {
-        if (!IsServer) return null;
+        drawnCard = CardPooler.Instance.GetCard(cardSpawnTransform.position);
+        drawnCardId.Value = drawnCard.NetworkObjectId;
 
-        PlayingCard card = GetNewCard();
-        if (card == null) return null;
+        return drawnCard;
+    }
 
-        // Server adds card - this automatically syncs via NetworkList in TablePlayer
-        player.AddCardToHand(card);
+    protected virtual IEnumerator DealCardToPlayer(TPlayer player)
+    {
+        if (!IsServer) yield break;
 
-        return card;
+        drawnCard = DrawCard();
+
+        if (drawnCard == null) yield break;
+
+        player.AddCardToHand(drawnCard);
+
+        yield return new WaitForEndOfFrame();
+
+        yield return new WaitUntil(() => drawnCard.IsMoving == false);
     }
 
     public void PlaceCardOnPile(PlayingCard card, bool placeFaceDown = false, float lerpSpeed = 5)
@@ -331,6 +365,48 @@ public abstract class CardGame<TPlayer, TAction> : NetworkBehaviour, ICardGame<T
         yield return new WaitForSeconds(timeBetweenCardDeals);
     }
 
+    protected bool TryTradeCard(TPlayer target, PlayingCard cardToAdd, PlayingCard cardToDiscard)
+    {
+        if (cardToDiscard == null || cardToAdd == null || target == null)
+            return false;
+
+        int index = target.Hand.GetIndexOfCard(cardToDiscard);
+        if (index == -1) return false;
+
+        if (target.RemoveCardFromHand(cardToDiscard))
+        {
+            PlaceCardOnPile(cardToDiscard);
+            target.InsertCardToHand(cardToAdd, index);
+            return true;
+        }
+
+        return false;
+    }
+
+    #endregion
+
+    #region Card Movement
+
+    /// <summary>
+    /// Shows a card to a player
+    /// </summary>
+    protected void BringCardToPlayer(CambioPlayer player, PlayingCard card, Vector3 offset)
+    {
+        // Move card above player, then apply offset (like reveal or pull position)
+        Vector3 targetPos = player.transform.position + offset;
+        card.MoveTo(targetPos, 5f);
+
+        // Rotate card to face upwards relative to player
+        Quaternion targetUpwardsRot = Quaternion.LookRotation(player.transform.forward, Vector3.up) * Quaternion.Euler(90f, 0f, 0);
+        card.RotateTo(targetUpwardsRot, 5f);
+    }
+
+
+    /// <summary>
+    /// Lifts a card up by a given height
+    /// </summary>
+    protected void LiftCard(PlayingCard card, float height) => card.MoveTo(card.transform.position + new Vector3(0, height, 0), 5f);
+
     #endregion
 
     #region Player AI
@@ -345,7 +421,7 @@ public abstract class CardGame<TPlayer, TAction> : NetworkBehaviour, ICardGame<T
     {
         yield return new WaitForSeconds(AIThinkingTime);
 
-        TAction action = currentPlayer.PlayerAI.DecideAction(TurnContext.AfterDraw, drawnCard);
+        TAction action = currentPlayer.PlayerAI.DecideAction(TurnContext.AfterDraw);
         yield return StartCoroutine(ExecuteActionRoutine(action));
     }
 
@@ -353,7 +429,19 @@ public abstract class CardGame<TPlayer, TAction> : NetworkBehaviour, ICardGame<T
 
     #region Helper Functions
 
+    protected TPlayer GetPlayerFromData(PlayerData data)
+    {
+        foreach (var player in players) if (player?.PlayerData == data) return player;
+        return null;
+    }
 
+    protected TPlayer GetPlayerFromClientID(ulong clientID) => GetPlayerFromData(PlayerManager.Instance.GetPlayerDataById(clientID));
+
+    protected TPlayer GetPlayerFromPlayerID(ulong playerID)
+    {
+        foreach (var player in players) if (player?.PlayerId == playerID) return player;
+        return null;
+    }
 
     #endregion
 
