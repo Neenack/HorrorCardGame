@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using Unity.Multiplayer.Playmode;
 using UnityEngine;
 
 public class CambioPlayerAI : PlayerAI<CambioPlayer, CambioActionData, CambioPlayerAI>
@@ -13,7 +14,7 @@ public class CambioPlayerAI : PlayerAI<CambioPlayer, CambioActionData, CambioPla
 
     public override CambioActionData DecideAction(TurnContext context)
     {
-        UnityEngine.Debug.Log("Action Requested: " + context.ToString());
+        //UnityEngine.Debug.Log("Action Requested: " + context.ToString());
 
         return context switch
         {
@@ -81,7 +82,7 @@ public class CambioPlayerAI : PlayerAI<CambioPlayer, CambioActionData, CambioPla
             case 6:
             case 7: //LOOK AT YOUR OWN CARD
                 PlayingCard cardToReveal = GetCardToReveal();
-                return new CambioActionData(CambioActionType.RevealCard, true, player.PlayerId, cardToReveal.NetworkObjectId);
+                return new CambioActionData(CambioActionType.RevealCard, true, player.PlayerId, 0, 0, cardToReveal.NetworkObjectId);
 
             case 8:
             case 9: //LOOK AT ANOTHER CARD
@@ -92,7 +93,7 @@ public class CambioPlayerAI : PlayerAI<CambioPlayer, CambioActionData, CambioPla
             case 10: //SWAP HANDS
                 if (ShouldSwapHand())
                 {
-                    return new CambioActionData(CambioActionType.SwapHand, true, player.PlayerId, 0, GetRandomPlayer().OwnerClientId, 0);
+                    return new CambioActionData(CambioActionType.SwapHand, true, player.PlayerId, 0, GetRandomPlayer().PlayerId, 0);
                 }
                 Debug.Log("AI: Chose not to swap");
                 break;
@@ -114,7 +115,7 @@ public class CambioPlayerAI : PlayerAI<CambioPlayer, CambioActionData, CambioPla
                 if (AbilityCard.Suit == Suit.Diamonds || AbilityCard.Suit == Suit.Hearts)
                 {
                     //Debug.Log("AI: Reveal whole hand");
-                    return new CambioActionData(CambioActionType.RevealHand, false, player.PlayerId);
+                    return new CambioActionData(CambioActionType.RevealHand, false, player.PlayerId, 0, player.PlayerId, 0);
                 }
                 break;
         }
@@ -211,6 +212,11 @@ public class CambioPlayerAI : PlayerAI<CambioPlayer, CambioActionData, CambioPla
         return cambioPlayer.GetScore() > 10;
     }
 
+    public PlayingCard ChooseBetween2Cards(PlayingCard card1, PlayingCard card2)
+    {
+        return player.GetCardValue(card1) < player.GetCardValue(card2) ? card1 : card2;
+    }
+
     /// <summary>
     /// Asks the AI if it would like to blind swap 2 cards
     /// </summary>
@@ -220,6 +226,7 @@ public class CambioPlayerAI : PlayerAI<CambioPlayer, CambioActionData, CambioPla
         return (player.Hand.Cards.Where(c => !cambioPlayer.SeenCards.Contains(c)).ToList().Count > 0)
             || cambioPlayer.GetCardValue(GetHighestSeenCard()) > 6;
     }
+
 
     public bool CanStack()
     {

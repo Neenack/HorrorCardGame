@@ -104,7 +104,6 @@ public class Interactable : NetworkBehaviour, IInteractable
     /// </summary>
     public void SetInteractable(bool interact)
     {
-        Debug.Log($"{name} set interactable: {interact}");
         canInteract = interact;
     }
 

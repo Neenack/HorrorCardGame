@@ -8,11 +8,14 @@ public enum CambioActionType
     TradeCard,
     SwapCard,
     SwapHand,
+    BlindSwap,
     RevealCard,
     RevealHand,
     CompareCards,
     CallCambio,
     Stack,
+    SelectCard,
+    ChooseCard
 }
 
 [GenerateSerializationForType(typeof(CambioActionData))]
@@ -27,13 +30,13 @@ public struct CambioActionData : INetworkSerializeByMemcpy
     public ulong TargetPlayerId;
     public ulong TargetCardId;
 
-    public CambioActionData(CambioActionType type, bool endsTurn, ulong playerClientId, ulong cardNetworkId = 0, ulong targetPlayerClientId = 0, ulong targetCardNetworkId = 0)
+    public CambioActionData(CambioActionType type, bool endsTurn, ulong playerId, ulong cardNetworkId = 0, ulong targetPlayerId = 0, ulong targetCardNetworkId = 0)
     {
         Type = type;
         EndsTurn = endsTurn;
-        PlayerId = playerClientId;
+        PlayerId = playerId;
         CardId = cardNetworkId;
-        TargetPlayerId = targetPlayerClientId;
+        TargetPlayerId = targetPlayerId;
         TargetCardId = targetCardNetworkId;
     }
 }

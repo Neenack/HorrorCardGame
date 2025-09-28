@@ -9,10 +9,11 @@ using UnityEditor.ShaderKeywordFilter;
 using UnityEngine;
 using UnityEngine.UIElements;
 using UnityEngine.XR;
+using static Interactable;
 
 public class CambioPlayer : TablePlayer<CambioPlayer, CambioActionData, CambioPlayerAI>
 {
-    private NetworkVariable<bool> hasPlayedLastTurn = new NetworkVariable<bool>(false);
+    public NetworkVariable<bool> hasPlayedLastTurn = new NetworkVariable<bool>(false);
 
     [Header("Cambio Settings")]
     [SerializeField] private Interactable callCambioButton;
@@ -21,15 +22,8 @@ public class CambioPlayer : TablePlayer<CambioPlayer, CambioActionData, CambioPl
     [SerializeField] private TextMeshPro scoreText;
     [SerializeField] private float rowSpacing = 2.5f;
 
-
     private HashSet<PlayingCard> seenCards = new HashSet<PlayingCard>();
     public HashSet<PlayingCard> SeenCards => seenCards;
-
-    #region Public Accessors
-
-    public bool HasPlayedFinalTurn => hasPlayedLastTurn.Value;
-
-    #endregion
 
 
     public override void OnNetworkSpawn()
@@ -78,16 +72,9 @@ public class CambioPlayer : TablePlayer<CambioPlayer, CambioActionData, CambioPl
         base.EndPlayerTurn();
 
         callCambioButton.gameObject.SetActive(false);
+        skipAbilityButton.gameObject.SetActive(false);
 
         DisableStartTurnInteraction();
-
-        EndTurnServerRpc();
-    }
-
-    [ServerRpc(RequireOwnership = false)]
-    private void EndTurnServerRpc()
-    {
-        hasPlayedLastTurn.Value = Game.Players.Any(p => !p.IsPlaying());
     }
 
     public override bool IsPlaying() => !hasPlayedLastTurn.Value;
@@ -96,20 +83,62 @@ public class CambioPlayer : TablePlayer<CambioPlayer, CambioActionData, CambioPl
 
     #region Interaction
 
+    #region Interact Event Switch
+    protected override EventHandler<InteractEventArgs> GetCardOnInteractEvent(CambioActionData data)
+    {
+        switch (data.Type)
+        {
+            case CambioActionType.Draw:
+                return Card_OnInteract_AfterDraw;
+
+            case CambioActionType.RevealCard:
+                return Card_OnInteract_RevealCard;
+            case CambioActionType.SwapHand:
+                return Card_OnInteract_SwapHand;
+
+            case CambioActionType.SelectCard:
+                return Card_OnInteract_ChooseCard;
+            case CambioActionType.CompareCards:
+                return Card_OnInteract_CompareCards;
+
+            case CambioActionType.Stack:
+                return Card_OnInteract_Stack;
+
+        }
+
+        return null;
+    }
+
+    #endregion
+
     #region Start Of Turn Interaction
 
     private void CallCambioButton_OnInteract(object sender, Interactable.InteractEventArgs e)
     {
         DisableStartTurnInteraction();
 
-        Game.TryExecuteAction(PlayerId, new CambioActionData(CambioActionType.CallCambio, true, PlayerId));
+        Game.TryExecuteAction(e.playerID, new CambioActionData(CambioActionType.CallCambio, true, PlayerId));
+    }
+
+    //Called by the server
+    public void CallCambio()
+    {
+        hasPlayedLastTurn.Value = true;
+
+        NotifyCallCambioClientRpc();
+    }
+
+    [ClientRpc]
+    private void NotifyCallCambioClientRpc()
+    {
+        calledCambioText.gameObject.SetActive(true);
     }
 
     private void InteractableDeck_OnInteract(object sender, Interactable.InteractEventArgs e)
     {
         DisableStartTurnInteraction();
 
-        Game.TryExecuteAction(PlayerId, new CambioActionData(CambioActionType.Draw, false, PlayerId));
+        Game.TryExecuteAction(e.playerID, new CambioActionData(CambioActionType.Draw, false, PlayerId));
     }
 
     private void EnableStartTurnInteraction()
@@ -131,71 +160,28 @@ public class CambioPlayer : TablePlayer<CambioPlayer, CambioActionData, CambioPl
 
     #region After Card Draw Interaction
 
-    /// <summary>
-    /// Requests for the player to enable interactions for after drawing a card
-    /// </summary>
-    public void RequestEnableCardDrawnInteraction()
+    private void Card_OnInteract_AfterDraw(object sender, InteractEventArgs e)
     {
-        if (IsServer)
+        PlayingCard drawnCard = PlayingCard.GetPlayingCardFromNetworkID(Game.DrawnCardID.Value);
+        drawnCard.Interactable.SetInteractable(false);
+        UnsubscribeCardFrom(Game.DrawnCardID.Value, Card_OnInteract_AfterDraw);
+
+        PlayingCard chosenCard = (sender as Interactable).GetComponent<PlayingCard>();
+
+        if (chosenCard == null)
         {
-            EnableCardDrawnInteractionClientRpc(PlayerData.OwnerClientId);
+            Debug.LogWarning("Could not find chosen card");
             return;
         }
-        EnableCardDrawnInteraction();
-    }
 
-    [ClientRpc]
-    private void EnableCardDrawnInteractionClientRpc(ulong localClientId)
-    {
-        if (PlayerData == null || localClientId != NetworkManager.Singleton.LocalClientId) return;
-
-        EnableCardDrawnInteraction();
-    }
-
-    private void EnableCardDrawnInteraction()
-    {
-        PlayingCard DrawnCard = PlayingCard.GetPlayingCardFromNetworkID(Game.DrawnCardID.Value);
-
-        DrawnCard.Interactable.SetInteractable(true);
-        DrawnCard.Interactable.OnInteract += DrawnCard_OnInteract;
-
-        foreach (var cardId in handCardIds)
+        if (HandCardIDs.Contains(chosenCard.NetworkObjectId)) //Chose one of your own cards so trade
         {
-            PlayingCard card = PlayingCard.GetPlayingCardFromNetworkID(cardId);
-            card.Interactable.SetInteractable(true);
-            card.Interactable.OnInteract += HandCard_OnInteract;
+            Game.TryExecuteAction(e.playerID, new CambioActionData(CambioActionType.TradeCard, true, PlayerId, chosenCard.NetworkObjectId, PlayerId, Game.DrawnCardID.Value));
         }
-    }
-
-    private void DisableCardDrawnInteration()
-    {
-        PlayingCard DrawnCard = PlayingCard.GetPlayingCardFromNetworkID(Game.DrawnCardID.Value);
-
-        DrawnCard.Interactable.SetInteractable(false);
-        DrawnCard.Interactable.OnInteract -= DrawnCard_OnInteract;
-
-        foreach (var cardId in handCardIds)
+        else //Chose the drawn card so discard
         {
-            PlayingCard card = PlayingCard.GetPlayingCardFromNetworkID(cardId);
-            card.Interactable.SetInteractable(false);
-            card.Interactable.OnInteract -= HandCard_OnInteract;
+            Game.TryExecuteAction(e.playerID, new CambioActionData(CambioActionType.Discard, true, PlayerId, Game.DrawnCardID.Value));
         }
-    }
-
-    private void DrawnCard_OnInteract(object sender, Interactable.InteractEventArgs e)
-    {
-        DisableCardDrawnInteration();
-
-        Game.TryExecuteAction(PlayerId, new CambioActionData(CambioActionType.Discard, true, PlayerId, Game.DrawnCardID.Value));
-    }
-
-    private void HandCard_OnInteract(object sender, Interactable.InteractEventArgs e)
-    {
-        DisableCardDrawnInteration();
-
-        PlayingCard cardToRemove = (sender as Interactable).GetComponent<PlayingCard>();
-
-        Game.TryExecuteAction(PlayerId, new CambioActionData(CambioActionType.TradeCard, true, PlayerId, cardToRemove.NetworkObjectId, PlayerId, Game.DrawnCardID.Value));
     }
 
     #endregion
@@ -243,38 +229,87 @@ public class CambioPlayer : TablePlayer<CambioPlayer, CambioActionData, CambioPl
     {
         DisableAbilityStartedInteraction();
 
-        Game.TryExecuteAction(PlayerId, new CambioActionData(CambioActionType.None, true, PlayerId));
+        Game.TryExecuteAction(e.playerID, new CambioActionData(CambioActionType.None, true, PlayerId));
     }
 
     #endregion
 
-    #region Ability Subscriptions
+    #region Ability Events
 
+    #region Reveal Card
 
-
-    #endregion
-
-    #endregion
-
-    #endregion
-
-    #region Server Actions
-
-    //SERVER CALLED CAMBIO
-    public void CallCambio()
+    private void Card_OnInteract_RevealCard(object sender, InteractEventArgs e)
     {
-        NotifyCallCambioClientRpc();
+        DisableAbilityStartedInteraction();
+
+        ulong cardNetworkId = (sender as Interactable).GetComponent<PlayingCard>().NetworkObjectId;
+        ulong playerWithCardId = Game.GetPlayerWithCard(cardNetworkId).PlayerId;
+
+        Game.TryExecuteAction(e.playerID, new CambioActionData(CambioActionType.RevealCard, true, Game.CurrentPlayerTurnID.Value, 0, playerWithCardId, cardNetworkId));
     }
 
     #endregion
 
-    #region Client Actions
+    #region Swap Hand
 
-    [ClientRpc]
-    private void NotifyCallCambioClientRpc()
+    private void Card_OnInteract_SwapHand(object sender, InteractEventArgs e)
     {
-        calledCambioText.gameObject.SetActive(true);
+        DisableAbilityStartedInteraction();
+
+        ulong cardNetworkId = (sender as Interactable).GetComponent<PlayingCard>().NetworkObjectId;
+        ulong playerWithCardId = Game.GetPlayerWithCard(cardNetworkId).PlayerId;
+
+        Game.TryExecuteAction(e.playerID, new CambioActionData(CambioActionType.SwapHand, true, Game.CurrentPlayerTurnID.Value, 0, playerWithCardId, 0));
     }
+
+    #endregion
+
+    #region Swap Cards
+
+    private void Card_OnInteract_ChooseCard(object sender, InteractEventArgs e)
+    {
+        ulong cardNetworkId = (sender as Interactable).GetComponent<PlayingCard>().NetworkObjectId;
+        Game.TryExecuteAction(e.playerID, new CambioActionData(CambioActionType.SelectCard, false, Game.CurrentPlayerTurnID.Value, 0, 0, cardNetworkId));
+    }
+
+    #endregion
+
+    #region Compare Cards
+
+    private void Card_OnInteract_CompareCards(object sender, InteractEventArgs e)
+    {
+        DisableAbilityStartedInteraction();
+
+        ulong cardNetworkId = (sender as Interactable).GetComponent<PlayingCard>().NetworkObjectId;
+
+        Game.TryExecuteAction(e.playerID, new CambioActionData(CambioActionType.ChooseCard, true, Game.CurrentPlayerTurnID.Value, 0, 0, cardNetworkId));
+    }
+
+    #endregion
+
+    #endregion
+
+    #endregion
+
+    #region Stacking
+
+    public void RequestSetStacking(bool interactable)
+    {
+        foreach (var player in Game.Players)
+        {
+            player.RequestSetHandInteractable(interactable, new CambioActionData(CambioActionType.Stack, false, player.PlayerId));
+        }
+    }
+
+    private void Card_OnInteract_Stack(object sender, InteractEventArgs e)
+    {
+        ulong cardNetworkId = (sender as Interactable).GetComponent<PlayingCard>().NetworkObjectId;
+        ulong playerWithCardId = Game.GetPlayerWithCard(cardNetworkId).PlayerId;
+
+        Game.TryExecuteAction(e.playerID, new CambioActionData(CambioActionType.Stack, false, e.playerID, 0, playerWithCardId, cardNetworkId));
+    }
+
+    #endregion
 
     #endregion
 

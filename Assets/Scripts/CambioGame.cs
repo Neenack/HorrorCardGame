@@ -1,8 +1,10 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using Unity.Multiplayer.Playmode;
 using Unity.Netcode;
+using Unity.VisualScripting;
 using UnityEngine;
 using static UnityEditor.Experimental.GraphView.GraphView;
 
@@ -18,6 +20,56 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
     [Header("Stacking Settings")]
     [SerializeField] private bool cardStacking = true;
     [SerializeField] private float stackingTime = 2f;
+
+    private NetworkVariable<bool> isStacking = new NetworkVariable<bool>(
+        false,
+        NetworkVariableReadPermission.Everyone,
+        NetworkVariableWritePermission.Server
+    );
+
+    private List<PlayingCard> selectedCards = new List<PlayingCard>();
+
+    #region Turn Management
+
+    protected override IEnumerator NextTurnRoutine()
+    {
+        if (!IsServer) yield break;
+
+        selectedCards.Clear();
+
+        //Set last turn if someone has called cambio
+        if (currentPlayer) currentPlayer.hasPlayedLastTurn.Value = Players.Any(p => !p.IsPlaying());
+
+        //Stacking
+        if (currentPlayer != null && cardStacking)
+        {
+            yield return StartCoroutine(StackingRoutine());
+        }
+
+        StartCoroutine(base.NextTurnRoutine());
+    }
+
+    private IEnumerator StackingRoutine()
+    {
+        Debug.Log("[Server] Stacking enabled!");
+
+        yield return new WaitForSeconds(0.5f);
+
+        foreach (var player in Players)
+        {
+            player.RequestSetStacking(true);
+        }
+
+        yield return new WaitForSeconds(stackingTime);
+
+        Debug.Log("[Server] Stacking disabled!");
+
+        DisableAllCardsAndUnsubscribe();
+    }
+
+    protected override bool CanOnlyPlayInTurn() => !isStacking.Value;
+
+    #endregion
 
     #region Card Dealing
 
@@ -71,13 +123,23 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
 
         player.TryAddSeenCard(card);
     }
+    private IEnumerator RevealPlayerHand(CambioPlayer player)
+    {
+        for (int i = 0; i < player.Hand.Cards.Count; i++)
+        {
+            PlayingCard card = player.Hand.GetCard(i);
+
+            StartCoroutine(RevealCardCoroutine(card, player, card.transform.position));
+        }
+
+        yield return new WaitForSeconds(cardViewingTime);
+    }
+
 
     protected override IEnumerator DealCardToPlayer(CambioPlayer player)
     {
         //Draw new card
         drawnCard = DrawCard();
-
-        Debug.Log($"Drawn Card Network ID: {drawnCard.NetworkObjectId}");
 
         // Position card in front of current player
         BringCardToPlayer(currentPlayer, drawnCard, cardPullPositionOffset);
@@ -86,7 +148,12 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
         yield return new WaitUntil(() => drawnCard.IsMoving == false);
 
         //Enable interaction for player or handle decision for AI
-        if (!player.IsAI) player.RequestEnableCardDrawnInteraction();
+        if (!player.IsAI)
+        {
+            //Set hand and drawn card interactable for the player client, and subscribe them to the event for card drawing
+            player.RequestSetHandInteractable(true, new CambioActionData(CambioActionType.Draw, false, currentPlayer.PlayerId));
+            player.RequestSetCardInteractable(drawnCard.NetworkObjectId, true, new CambioActionData(CambioActionType.Draw, false, currentPlayer.PlayerId));
+        }
         else StartCoroutine(HandleAIDrawDecision());
     }
 
@@ -158,83 +225,75 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
         else
             Debug.Log($"[Server] Player {currentPlayerTurnId.Value} has executed Action: " + action.Type);
 
+        CambioPlayer player = GetPlayerFromPlayerID(action.PlayerId);
+        PlayingCard playerCard = PlayingCard.GetPlayingCardFromNetworkID(action.CardId);
+        CambioPlayer targetPlayer = GetPlayerFromPlayerID(action.TargetPlayerId);
+        PlayingCard targetCard = PlayingCard.GetPlayingCardFromNetworkID(action.TargetCardId);
+
         switch (action.Type)
         {
             case CambioActionType.None:
-                if (action.EndsTurn) NextTurn();
-                yield break;
+                break;
 
             case CambioActionType.CallCambio:
-                currentPlayer.CallCambio();
-                NextTurn();
-                yield break;
+                player.CallCambio();
+                break;
 
             case CambioActionType.Draw:
-                StartCoroutine(DealCardToPlayer(currentPlayer));
+                StartCoroutine(DealCardToPlayer(player));
                 break;
 
             case CambioActionType.Discard:
                 PlaceCardOnPile(drawnCard);
-
                 yield return new WaitForSeconds(currentPlayer.IsAI ? AIThinkingTime : 0);
-                NextTurn();
-                //DoCardAbility();
+                DoCardAbility();
                 yield break;
 
             case CambioActionType.TradeCard:
-                CambioPlayer targetPlayer = GetPlayerFromPlayerID(action.TargetPlayerId);
-                PlayingCard discardedCard = PlayingCard.GetPlayingCardFromNetworkID(action.CardId);
-                PlayingCard newCard = PlayingCard.GetPlayingCardFromNetworkID(action.TargetCardId);
-
-                if (TryTradeCard(targetPlayer, newCard, discardedCard))
-                {
-                    targetPlayer.TryAddSeenCard(newCard);
-                }
-                break;
-
-            /*
-            case CambioActionType.SwapCard:
-                TrySwapCards(currentPlayer, action.SwapData.Discard, action.TargetPlayer, action.SwapData.Keep);
-                break;
-
-            case CambioActionType.SwapHand:
-                SwapHands(currentPlayer, action.TargetPlayer);
+                if (TryTradeCard(targetPlayer, targetCard, playerCard)) targetPlayer.TryAddSeenCard(targetCard);
                 break;
 
             case CambioActionType.RevealCard:
+                if (targetPlayer == player) yield return StartCoroutine(RevealCardCoroutine(targetCard, targetPlayer, targetCard.transform.position)); //If revealing your own card
+                else yield return StartCoroutine(RevealCardCoroutine(targetCard, player, currentPlayer.transform.position)); //Revealing someone elses card
+                break;
 
-                //If revealing your own card
-                if (action.TargetPlayer == currentPlayer)
-                {
-                    yield return StartCoroutine(RevealCardCoroutine(action.TargetCard, action.TargetPlayer, action.TargetCard.transform.position));
-                }
-                else //Revealing someone elses card
-                {
-                    yield return StartCoroutine(RevealCardCoroutine(action.TargetCard, currentPlayer, currentPlayer.transform.position));
-                }
+            case CambioActionType.SwapHand:
+                SwapHands(player, targetPlayer);
+                break;
+
+            case CambioActionType.SwapCard:
+                TrySwapCards(player, playerCard, targetPlayer, targetCard);
                 break;
 
             case CambioActionType.RevealHand:
-                yield return StartCoroutine(RevealWholeHand());
+                yield return StartCoroutine(RevealPlayerHand(targetPlayer));
                 break;
 
-
-            case CambioActionType.CompareCards:
-                swapEventDictionary.Add(action.SwapData.Keep, action.TargetPlayer);
-                swapEventDictionary.Add(action.SwapData.Discard, currentPlayer);
-                ChooseSwapEvent_BringCardsToChoose();
-
-                yield return new WaitForSeconds(currentPlayer.IsAI ? AIThinkingTime : 0);
-
-                PlayingCard choice = currentPlayer.GetCardValue(action.SwapData.Keep) < currentPlayer.GetCardValue(action.SwapData.Discard) ? action.SwapData.Keep : action.SwapData.Discard;
-                ChooseSwapEvent_ChooseCardToKeep(choice);
-
+            case CambioActionType.SelectCard:
+                SelectCard(targetCard);
                 yield break;
 
+            case CambioActionType.CompareCards:
+                BringCardsToPlayerToChoose(player, playerCard, targetCard);
+                if (!currentPlayer.IsAI)
+                {
+                    currentPlayer.RequestSetCardInteractable(playerCard.NetworkObjectId, true, new CambioActionData(CambioActionType.CompareCards, true, currentPlayer.PlayerId));
+                    currentPlayer.RequestSetCardInteractable(targetCard.NetworkObjectId, true, new CambioActionData(CambioActionType.CompareCards, true, currentPlayer.PlayerId));
+                }
+                else
+                {
+                    selectedCards.Add(playerCard);
+                    selectedCards.Add(targetCard);
+                    StartCoroutine(ExecuteActionRoutine(new CambioActionData(CambioActionType.ChooseCard, false, currentPlayer.PlayerId, 0, 0, currentPlayer.PlayerAI.ChooseBetween2Cards(playerCard, targetCard).NetworkObjectId)));
+                }
+                yield break;
+            case CambioActionType.ChooseCard:
+                ChooseCard(targetCard);
+                yield break;
             case CambioActionType.Stack:
-                StackCard(action.TargetCard, action.TargetPlayer);
-                break;
-            */
+                StackCard(player, targetCard);
+                yield break;
         }
 
         yield return new WaitForSeconds(currentPlayer.IsAI ? AIThinkingTime : 0);
@@ -245,6 +304,7 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
     private void DoCardAbility()
     {
         PlayingCard abilityCard = cardPile[cardPile.Count - 1];
+        int cardValue = currentPlayer.GetCardValue(abilityCard);
 
         if (currentPlayer.IsAI)
         {
@@ -253,97 +313,140 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
             return;
         }
 
-        currentPlayer.RequestEnableAbilityStartedInteraction();
+        //Does not enable the skip turn button if the card is below 6
+        if (cardValue >= 6 && cardValue != 13) currentPlayer.RequestEnableAbilityStartedInteraction();
 
-        switch (currentPlayer.GetCardValue(abilityCard))
+        switch (cardValue)
         {
-            /*
             case < 6:
                 NextTurn();
                 break;
             case 6:
             case 7:
                 Debug.Log("Look at your own card!");
-            /*
-                currentPlayer.SetHandInteractable(true, RevealPersonalCardEvent);
+                currentPlayer.RequestSetHandInteractable(true, new CambioActionData(CambioActionType.RevealCard, true, currentPlayer.PlayerId));
                 break;
             case 8:
             case 9:
                 Debug.Log("Look at someone elses card!");
-
-                currentPlayer.SetHandInteractable(false);
+                currentPlayer.RequestSetHandInteractable(false);
                 foreach (var player in players)
                 {
                     if (player == currentPlayer) continue;
-                    player.SetHandInteractable(true, RevealOtherPlayerCardEvent);
+                    player.RequestSetHandInteractable(true, new CambioActionData(CambioActionType.RevealCard, true, currentPlayer.PlayerId));
                 }
                 break;
-            /*
             case 10:
                 Debug.Log("Swap entire hands!");
-
-                currentPlayer.SetHandInteractable(false);
+                currentPlayer.RequestSetHandInteractable(false);
                 foreach (var player in players)
                 {
-                    player.SetHandInteractable(true, InteractMode.AllowedPlayers, false);
-                    player.AddAllowedInteractPlayerToHand(currentPlayer.PlayerData);
-
-                    foreach (var card in player.Hand.Cards) card.Interactable.OnInteract += SwapHandsEvent;
+                    if (player == currentPlayer) continue;
+                    player.RequestSetHandInteractable(true, new CambioActionData(CambioActionType.SwapHand, true, currentPlayer.PlayerId));
                 }
-
                 break;
-
             case 11:
                 Debug.Log("Choose 2 cards to decide to swap");
-
-                currentPlayer.SetHandInteractable(true);
-                foreach (var card in currentPlayer.Hand.Cards) card.Interactable.OnInteract += ChooseSwapEvent_ChooseFirstCard;
-
+                currentPlayer.RequestSetHandInteractable(true, new CambioActionData(CambioActionType.SelectCard, false, currentPlayer.PlayerId));
                 break;
-
             case 12:
                 Debug.Log("Blind swap!");
-
-                currentPlayer.SetHandInteractable(true);
-                foreach (var card in currentPlayer.Hand.Cards) card.Interactable.OnInteract += BlindSwapEvent_ChooseFirstCard;
-
+                currentPlayer.RequestSetHandInteractable(true, new CambioActionData(CambioActionType.SelectCard, false, currentPlayer.PlayerId));
                 break;
 
             case 13:
                 Debug.Log("Look at all your cards!");
-                TryExecuteAction(new CambioAction(CambioActionType.RevealHand, true, currentPlayer));
-
+                StartCoroutine(ExecuteActionRoutine(new CambioActionData(CambioActionType.RevealHand, true, currentPlayer.PlayerId, 0, currentPlayer.PlayerId, 0)));
                 break;
-            */
         }
     }
 
     #endregion
 
-    #region Player Events
+    #region Card Management
 
-    /*
-    private void RevealPersonalCardEvent(object sender, EventArgs e)
+    private void SelectCard(PlayingCard card)
     {
-        SetHandInteractable(false, RevealPersonalCardEvent);
-        PlayingCard cardToReveal = (sender as Interactable).GetComponent<PlayingCard>();
-        Game.TryExecuteAction(OwnerClientId, new CambioAction(CambioActionType.RevealCard, true, this, cardToReveal));
+        selectedCards.Add(card);
+        LiftCard(card, cardLiftHeight);
+
+        //If you have picked 2 cards, do the ability
+        if (selectedCards.Count == 2)
+        {
+            int value = currentPlayer.GetCardValue(cardPile[cardPile.Count - 1]);
+
+            if (value == 11) //CHOOSE BETWEEN CARDS
+            {
+                StartCoroutine(ExecuteActionRoutine(new CambioActionData(CambioActionType.CompareCards, false, currentPlayer.PlayerId, selectedCards[0].NetworkObjectId, 0, selectedCards[1].NetworkObjectId)));
+            }
+
+            else if (value == 12) //SWAP CARDS
+            {
+                PlayingCard playerCardChoice = selectedCards.First(c => GetPlayerWithCard(c) == currentPlayer);
+                PlayingCard otherCardChoice = selectedCards.First(c => GetPlayerWithCard(c) != currentPlayer);
+
+                CambioPlayer otherPlayer = GetPlayerWithCard(otherCardChoice);
+
+                StartCoroutine(ExecuteActionRoutine(new CambioActionData(CambioActionType.SwapCard, true, currentPlayer.PlayerId, playerCardChoice.NetworkObjectId, otherPlayer.PlayerId,otherCardChoice.NetworkObjectId)));
+            }
+        }
+        else if (selectedCards.Count == 1)
+        {
+            Debug.Log("[Server] Select another players card!");
+
+            CambioPlayer playerWithCard = GetPlayerWithCard(card);
+            if (playerWithCard.PlayerId == currentPlayer.PlayerId)
+            {
+                foreach (var player in players)
+                {
+                    if (player == currentPlayer) continue;
+                    player.RequestSetHandInteractable(true, new CambioActionData(CambioActionType.SelectCard, false, currentPlayer.PlayerId));
+                }
+            }
+        }
     }
 
-    private void RevealOtherPlayerCardEvent(object sender, EventArgs e)
+    //Called after given the choice between the selected cards and has chosen one
+    private void ChooseCard(PlayingCard chosenCard)
     {
-        //UNSUBSCRIBE FROM EVENTS
-        foreach (var player in players)
+        PlayingCard otherCard = selectedCards.First(c => c != chosenCard);
+
+        //If they chose their current card do nothing
+        if (currentPlayer.Hand.Cards.Contains(chosenCard))
         {
-            player.SetHandInteractable(false, RevealOtherPlayerCardEvent);
+            StartCoroutine(ExecuteActionRoutine(new CambioActionData(CambioActionType.None, true, currentPlayer.PlayerId)));
+        }
+        else
+        {
+            CambioPlayer otherPlayer = GetPlayerWithCard(chosenCard);
+            StartCoroutine(ExecuteActionRoutine(new CambioActionData(CambioActionType.SwapCard, true, currentPlayer.PlayerId, otherCard.NetworkObjectId, otherPlayer.PlayerId, chosenCard.NetworkObjectId)));
         }
 
-        PlayingCard chosenCard = (sender as Interactable).GetComponent<PlayingCard>();
-        CambioPlayer otherPlayer = GetPlayerWithCard(chosenCard);
-
-        TryExecuteAction(new CambioAction(CambioActionType.RevealCard, true, otherPlayer, chosenCard));
     }
-    */
+
+    private void BringCardsToPlayerToChoose(CambioPlayer player, PlayingCard card1, PlayingCard card2)
+    {
+        BringCardToPlayer(player, card1, new Vector3(-0.2f, cardPullPositionOffset.y, cardPullPositionOffset.z));
+        BringCardToPlayer(player, card2, new Vector3(0.2f, cardPullPositionOffset.y, cardPullPositionOffset.z));
+    }
+
+    #endregion
+
+    #region Stacking
+
+    private void StackCard(CambioPlayer playerWhoStacked, PlayingCard cardToStack)
+    {
+        CambioPlayer playerWithCard = GetPlayerWithCard(cardToStack);
+
+        if (playerWithCard == playerWhoStacked)
+        {
+            Debug.Log("[Server] Player tried stacking their own card!");
+        }
+        else
+        {
+            Debug.Log("[Server] Player tried stacking someone elses card!");
+        }
+    }
 
     #endregion
 }

@@ -93,6 +93,7 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
     protected abstract bool HasGameEnded();
     protected abstract IEnumerator ShowWinnerRoutine();
     protected abstract IEnumerator ExecuteActionRoutine(TAction action);
+    protected abstract bool CanOnlyPlayInTurn();
 
     #endregion
 
@@ -236,6 +237,8 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
     {
         if (!IsServer) yield break;
 
+        UpdatePlayerHands();
+
         int attempts = 0;
         do
         {
@@ -252,23 +255,32 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
         }
 
         //Set owner client id so only the given client will recieve the input
-        currentOwnerClientTurnId.Value = currentPlayer.PlayerData.OwnerClientId;
+        currentOwnerClientTurnId.Value = currentPlayer.PlayerData == null ? OwnerClientId : currentPlayer.PlayerData.OwnerClientId;
 
         yield return new WaitForSeconds(1f);
-
 
         //change the turn id
         currentPlayerTurnId.Value = currentPlayer.PlayerId;
 
         if (currentPlayer.IsAI)
         {
-            Debug.Log($"[Server] AI turn!");
+            Debug.Log($"[Server] {currentPlayer.PlayerId} (AI) turn!");
             StartCoroutine(HandleAITurn());
         }
         else
         {
             Debug.Log($"[Server] {currentPlayer.PlayerId} turn!");
         }
+    }
+
+    protected void UpdatePlayerHands()
+    {
+        foreach (var player in players) player.Hand.UpdateHand();
+    }
+
+    protected void DisableAllCardsAndUnsubscribe()
+    {
+        foreach (var player in players) player.DisableAllCardsAndUnsubscribeClientRpc();
     }
 
     #region Requesting Actions
@@ -281,7 +293,7 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
             return;
         }
 
-        if (currentPlayerTurnId.Value != playerID)
+        if (CanOnlyPlayInTurn() && currentOwnerClientTurnId.Value != playerID)
         {
             Debug.LogWarning("[Client] It is not your turn to execute an action!");
             return;
@@ -298,11 +310,13 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
 
     private void ServerTryExecuteAction(ulong playerID, TAction action)
     {
-        if (currentPlayerTurnId.Value != playerID)
+        if (CanOnlyPlayInTurn() && currentOwnerClientTurnId.Value != playerID)
         {
             Debug.LogWarning($"[Server] Player {playerID} tried to execute an action out of turn!");
             return;
         }
+
+        DisableAllCardsAndUnsubscribe();
 
         StartCoroutine(ExecuteActionRoutine(action));
     }
@@ -383,6 +397,41 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
         return false;
     }
 
+    protected bool TrySwapCards(TPlayer player1, PlayingCard card1, TPlayer player2, PlayingCard card2)
+    {
+        int index1 = player1.Hand.GetIndexOfCard(card1);
+        int index2 = player2.Hand.GetIndexOfCard(card2);
+
+        if (index1 == -1 || index2 == -1) return false;
+
+        bool remove1 = player1.RemoveCardFromHand(card1);
+        bool remove2 = player2.RemoveCardFromHand(card2);
+
+        if (remove1 && remove2)
+        {
+            player1.InsertCardToHand(card2, index1);
+            player2.InsertCardToHand(card1, index2);
+            return true;
+        }
+
+        return false;
+    }
+
+    protected void SwapHands(TPlayer player1, TPlayer player2)
+    {
+        List<PlayingCard> temp1Cards = new List<PlayingCard>(player1.Hand.Cards);
+        List<PlayingCard> temp2Cards = new List<PlayingCard>(player2.Hand.Cards);
+
+        player1.ResetHand();
+        player2.ResetHand();
+
+        foreach (var card in temp2Cards)
+            player1.AddCardToHand(card);
+
+        foreach (var card in temp1Cards)
+            player2.AddCardToHand(card);
+    }
+
     #endregion
 
     #region Card Movement
@@ -440,6 +489,26 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
     protected TPlayer GetPlayerFromPlayerID(ulong playerID)
     {
         foreach (var player in players) if (player?.PlayerId == playerID) return player;
+        return null;
+    }
+
+    protected TPlayer GetPlayerWithCard(PlayingCard card)
+    {
+        if (card == null) return null;
+
+        foreach (var player in players)
+        {
+            if (player.Hand.Cards.Contains(card))
+                return player;
+        }
+        return null;
+    }
+    public TPlayer GetPlayerWithCard(ulong cardNetworkId)
+    {
+        foreach (var player in players)
+        {
+            if (player.HandCardIDs.Contains(cardNetworkId)) return player;
+        }
         return null;
     }
 
