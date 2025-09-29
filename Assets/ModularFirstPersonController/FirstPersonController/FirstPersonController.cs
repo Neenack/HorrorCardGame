@@ -9,6 +9,8 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using Unity.Netcode;
+using Unity.VisualScripting;
+
 
 
 #if UNITY_EDITOR
@@ -133,6 +135,20 @@ public class FirstPersonController : NetworkBehaviour
 
     #endregion
 
+    #region Public Variables
+
+    public void EnableMovement()
+    {
+        playerCanMove = true;
+    }
+
+    public void DisableMovement()
+    {
+        playerCanMove = false;
+    }
+
+    #endregion
+
     private void Awake()
     {
         rb = GetComponent<Rigidbody>();
@@ -209,59 +225,7 @@ public class FirstPersonController : NetworkBehaviour
         #endregion
     }
 
-    /*
-    void Start()
-    {
-        if(lockCursor)
-        {
-            Cursor.lockState = CursorLockMode.Locked;
-        }
-
-        if(crosshair)
-        {
-            crosshairObject.sprite = crosshairImage;
-            crosshairObject.color = crosshairColor;
-        }
-        else
-        {
-            crosshairObject.gameObject.SetActive(false);
-        }
-
-        #region Sprint Bar
-
-        sprintBarCG = GetComponentInChildren<CanvasGroup>();
-
-        if(useSprintBar)
-        {
-            sprintBarBG.gameObject.SetActive(true);
-            sprintBar.gameObject.SetActive(true);
-
-            float screenWidth = Screen.width;
-            float screenHeight = Screen.height;
-
-            sprintBarWidth = screenWidth * sprintBarWidthPercent;
-            sprintBarHeight = screenHeight * sprintBarHeightPercent;
-
-            sprintBarBG.rectTransform.sizeDelta = new Vector3(sprintBarWidth, sprintBarHeight, 0f);
-            sprintBar.rectTransform.sizeDelta = new Vector3(sprintBarWidth - 2, sprintBarHeight - 2, 0f);
-
-            if(hideBarWhenFull)
-            {
-                sprintBarCG.alpha = 0;
-            }
-        }
-        else
-        {
-            sprintBarBG.gameObject.SetActive(false);
-            sprintBar.gameObject.SetActive(false);
-        }
-
-        #endregion
-    }
-    */
-
     float camRotation;
-
     private void Update()
     {
         if (!IsOwner) return;

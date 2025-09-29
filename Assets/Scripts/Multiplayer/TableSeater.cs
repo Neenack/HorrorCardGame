@@ -9,6 +9,13 @@ public class TableSeater : NetworkSingleton<TableSeater>
 
     private void Awake()
     {
+        ITable temp = GetComponent<ITable>();
+        if (temp != null)
+        {
+            table = temp;
+            return;
+        }
+
         GameObject cardGame = GameObject.FindWithTag("CardGame");
         table = cardGame.GetComponent<ITable>();
     }

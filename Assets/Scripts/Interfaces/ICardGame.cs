@@ -21,6 +21,8 @@ public interface ICardGame<TPlayer, TAction, TAI>
     NetworkVariable<ulong> CurrentOwnerClientTurnID { get; }
 
     void TryExecuteAction(ulong playerID, TAction action);
+
     TPlayer GetPlayerWithCard(ulong cardNetworkId);
+    TPlayer GetPlayerFromData(PlayerData data);
 
 }

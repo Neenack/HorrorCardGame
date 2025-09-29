@@ -64,7 +64,6 @@ public class PlayerManager : NetworkSingleton<PlayerManager>
     {
         if (players.TryGetValue(clientId, out PlayerData player))
         {
-            Debug.Log($"Found player {player.GetName()} from ID: " +  clientId);
             return player;
         }
         return null;

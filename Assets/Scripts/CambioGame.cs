@@ -52,17 +52,20 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
     private IEnumerator StackingRoutine()
     {
         Debug.Log("[Server] Stacking enabled!");
+        isStacking.Value = true;
 
         yield return new WaitForSeconds(0.5f);
 
         foreach (var player in Players)
         {
+            if (player.IsAI) continue;
             player.RequestSetStacking(true);
         }
 
         yield return new WaitForSeconds(stackingTime);
 
         Debug.Log("[Server] Stacking disabled!");
+        isStacking.Value = false;
 
         DisableAllCardsAndUnsubscribe();
     }
@@ -254,7 +257,7 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
                 break;
 
             case CambioActionType.RevealCard:
-                if (targetPlayer == player) yield return StartCoroutine(RevealCardCoroutine(targetCard, targetPlayer, targetCard.transform.position)); //If revealing your own card
+                if (targetPlayer.PlayerId == player.PlayerId) yield return StartCoroutine(RevealCardCoroutine(targetCard, targetPlayer, targetCard.transform.position)); //If revealing your own card
                 else yield return StartCoroutine(RevealCardCoroutine(targetCard, player, currentPlayer.transform.position)); //Revealing someone elses card
                 break;
 
@@ -438,7 +441,7 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
     {
         CambioPlayer playerWithCard = GetPlayerWithCard(cardToStack);
 
-        if (playerWithCard == playerWhoStacked)
+        if (playerWithCard.PlayerId == playerWhoStacked.PlayerId)
         {
             Debug.Log("[Server] Player tried stacking their own card!");
         }

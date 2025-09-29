@@ -478,7 +478,7 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
 
     #region Helper Functions
 
-    protected TPlayer GetPlayerFromData(PlayerData data)
+    public TPlayer GetPlayerFromData(PlayerData data)
     {
         foreach (var player in players) if (player?.PlayerData == data) return player;
         return null;
