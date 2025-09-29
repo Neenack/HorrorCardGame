@@ -15,7 +15,8 @@ public enum CambioActionType
     CallCambio,
     Stack,
     SelectCard,
-    ChooseCard
+    ChooseCard,
+    GiveCard
 }
 
 [GenerateSerializationForType(typeof(CambioActionData))]

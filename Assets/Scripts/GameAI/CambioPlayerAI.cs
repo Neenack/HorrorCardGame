@@ -82,7 +82,7 @@ public class CambioPlayerAI : PlayerAI<CambioPlayer, CambioActionData, CambioPla
             case 6:
             case 7: //LOOK AT YOUR OWN CARD
                 PlayingCard cardToReveal = GetCardToReveal();
-                return new CambioActionData(CambioActionType.RevealCard, true, player.PlayerId, 0, 0, cardToReveal.NetworkObjectId);
+                return new CambioActionData(CambioActionType.RevealCard, true, player.PlayerId, cardToReveal.NetworkObjectId, player.PlayerId, cardToReveal.NetworkObjectId);
 
             case 8:
             case 9: //LOOK AT ANOTHER CARD
@@ -127,7 +127,8 @@ public class CambioPlayerAI : PlayerAI<CambioPlayer, CambioActionData, CambioPla
     {
         if (CanStack())
         {
-            return new CambioActionData(CambioActionType.Stack, false, player.PlayerId, GetCardToStack().NetworkObjectId);
+            PlayingCard cardToStack = GetCardToStack();
+            return new CambioActionData(CambioActionType.Stack, false, player.PlayerId, cardToStack.NetworkObjectId, player.PlayerId, cardToStack.NetworkObjectId);
         }
 
         return new CambioActionData(CambioActionType.None, false, player.PlayerId);

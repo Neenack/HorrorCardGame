@@ -20,6 +20,9 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
     [Header("Stacking Settings")]
     [SerializeField] private bool cardStacking = true;
     [SerializeField] private float stackingTime = 2f;
+    private CambioPlayer playerToRecieveCard;
+    private bool hasStacked = false;
+    private bool waitingForStackInput = false;
 
     private NetworkVariable<bool> isStacking = new NetworkVariable<bool>(
         false,
@@ -62,7 +65,17 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
             player.RequestSetStacking(true);
         }
 
-        yield return new WaitForSeconds(stackingTime);
+        yield return new WaitForSeconds(stackingTime / 2);
+
+        foreach (var player in Players)
+        {
+            if (!player.IsAI) continue;
+            StartCoroutine(ExecuteActionRoutine(player.PlayerAI.DecideAction(TurnContext.AfterTurn)));
+        }
+
+        yield return new WaitForSeconds(stackingTime / 2);
+
+        yield return new WaitUntil(() => hasStacked == false);
 
         Debug.Log("[Server] Stacking disabled!");
         isStacking.Value = false;
@@ -297,6 +310,9 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
             case CambioActionType.Stack:
                 StackCard(player, targetCard);
                 yield break;
+            case CambioActionType.GiveCard:
+                GiveStackCard(targetCard);
+                yield break;
         }
 
         yield return new WaitForSeconds(currentPlayer.IsAI ? AIThinkingTime : 0);
@@ -439,16 +455,74 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
 
     private void StackCard(CambioPlayer playerWhoStacked, PlayingCard cardToStack)
     {
+        if (hasStacked) return;
+
         CambioPlayer playerWithCard = GetPlayerWithCard(cardToStack);
+
+        if (!playerWithCard.RemoveCardFromHand(cardToStack)) return;
+
+        hasStacked = true;
+
+        DisableAllCardsAndUnsubscribe();
+
+        StartCoroutine(StackCoroutine(playerWithCard, playerWhoStacked, cardToStack));
+    }
+
+    private IEnumerator StackCoroutine(CambioPlayer playerWithCard, CambioPlayer playerWhoStacked, PlayingCard cardToStack)
+    {
+        bool isCorrect = currentPlayer.GetCardValue(cardToStack) == currentPlayer.GetCardValue(cardPile[cardPile.Count - 1]);
+       
+        PlaceCardOnPile(cardToStack);
+
+        yield return new WaitForSeconds(1f);
 
         if (playerWithCard.PlayerId == playerWhoStacked.PlayerId)
         {
-            Debug.Log("[Server] Player tried stacking their own card!");
+            Debug.Log($"[Server] Player tried stacking their own card! {isCorrect}");
+            if (!isCorrect) //DEAL CARD BACK TO PLAYER AND ANOTHER ONE
+            {
+                yield return StartCoroutine(ReturnCardFromPile(playerWithCard));
+
+                yield return base.DealCardToPlayer(playerWithCard);
+            }
         }
         else
         {
-            Debug.Log("[Server] Player tried stacking someone elses card!");
+            Debug.Log($"[Server] Player tried stacking someone elses card! {isCorrect}");
+
+            if (!isCorrect)
+            {
+                yield return StartCoroutine(ReturnCardFromPile(playerWhoStacked));
+            }
+            else
+            {
+                waitingForStackInput = true;
+                playerToRecieveCard = playerWithCard;
+
+                //Player who stacked can give one of their cards to the other player
+                playerWhoStacked.RequestSetHandInteractable(true, new CambioActionData(CambioActionType.GiveCard, false, playerWhoStacked.PlayerId));
+
+                yield return new WaitUntil(() => waitingForStackInput == false);
+            }
         }
+
+        hasStacked = false;
+    }
+
+    private IEnumerator ReturnCardFromPile(CambioPlayer player)
+    {
+        PlayingCard card = cardPile[cardPile.Count - 1];
+
+        player.AddCardToHand(card);
+        cardPile.Remove(card);
+
+        yield return new WaitUntil(() => card.IsMoving == false);
+    }
+
+    private void GiveStackCard(PlayingCard card)
+    {
+        playerToRecieveCard.AddCardToHand(card);
+        waitingForStackInput = false;
     }
 
     #endregion

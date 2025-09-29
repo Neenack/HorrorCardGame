@@ -5446,7 +5446,7 @@ MonoBehaviour:
   cardRevealHeight: 0.2
   timeBetweenPlayerReveals: 1
   cardStacking: 1
-  stackingTime: 5
+  stackingTime: 2
 --- !u!114 &1362280949
 MonoBehaviour:
   m_ObjectHideFlags: 0
