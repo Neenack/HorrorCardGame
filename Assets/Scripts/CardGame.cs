@@ -167,7 +167,8 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
 
         //Allow deck interact
         interactableDeck.SetInteractMode(InteractMode.All);
-        interactableDeck.SetText("Pull Card");
+
+        interactableDeck.SetDisplay(new InteractDisplay("Pull Card"));
 
         //Setup AI players on the server
         foreach (var player in players) if (player.IsAI) player.SetGame(this);
@@ -209,7 +210,7 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
         cardPile.Clear();
         topPileCardId.Value = 0;
 
-        interactableDeck.SetText("Start Game");
+        interactableDeck.SetDisplay(new InteractDisplay("Start Game"));
         interactableDeck.SetInteractMode(InteractMode.Host);
 
         gameState.Value = GameState.WaitingToStart;

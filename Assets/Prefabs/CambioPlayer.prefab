@@ -288,7 +288,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.NetworkObject
-  GlobalObjectIdHash: 717761853
+  GlobalObjectIdHash: 2477095021
   InScenePlacedSourceGlobalObjectIdHash: 0
   DeferredDespawnTick: 0
   Ownership: 1
@@ -552,6 +552,10 @@ PrefabInstance:
       propertyPath: defaultText
       value: Call Cambio
       objectReference: {fileID: 0}
+    - target: {fileID: 915164071938063264, guid: b317fd8a5157aa54481aef3ecd33c9f3, type: 3}
+      propertyPath: interactText
+      value: Call Cambio
+      objectReference: {fileID: 0}
     - target: {fileID: 5037355576349323691, guid: b317fd8a5157aa54481aef3ecd33c9f3, type: 3}
       propertyPath: m_Name
       value: CallCambio
@@ -635,6 +639,10 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 915164071938063264, guid: b317fd8a5157aa54481aef3ecd33c9f3, type: 3}
       propertyPath: defaultText
+      value: Skip Ability
+      objectReference: {fileID: 0}
+    - target: {fileID: 915164071938063264, guid: b317fd8a5157aa54481aef3ecd33c9f3, type: 3}
+      propertyPath: interactText
       value: Skip Ability
       objectReference: {fileID: 0}
     - target: {fileID: 5037355576349323691, guid: b317fd8a5157aa54481aef3ecd33c9f3, type: 3}

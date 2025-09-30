@@ -1,7 +1,4 @@
 using System;
-using System.Collections.Generic;
-using System.Runtime.CompilerServices;
-using Unity.Collections;
 using Unity.Netcode;
 using UnityEngine;
 
@@ -24,19 +21,29 @@ public class Interactable : NetworkBehaviour, IInteractable
     [SerializeField] private bool canInteract = true;
 
     private NetworkVariable<InteractMode> interactMode;
-    private NetworkVariable<FixedString64Bytes> interactableText;
+    private NetworkVariable<InteractDisplay> interactableDisplay;
 
     [SerializeField] private InteractMode defaultInteractMode;
-    [SerializeField] private string defaultText;
+
+    [Header("Interact Display")]
+    [SerializeField] private string interactText = "Interact";
+    [SerializeField] private bool showInteractBox;
+    [SerializeField] private string interactBoxTitle;
+    [SerializeField] private string interactBoxBody;
 
 
     private void Awake()
     {
-        interactableText = new NetworkVariable<FixedString64Bytes>(
-         new FixedString64Bytes(defaultText),
-         NetworkVariableReadPermission.Everyone,
-         NetworkVariableWritePermission.Server
-        );
+        interactableDisplay = new NetworkVariable<InteractDisplay>(
+        new InteractDisplay(
+            interactText,
+            showInteractBox,
+            interactBoxTitle,
+            interactBoxBody
+            ),
+        NetworkVariableReadPermission.Everyone,
+        NetworkVariableWritePermission.Server
+    );
 
         interactMode = new NetworkVariable<InteractMode>(
         defaultInteractMode,
@@ -47,7 +54,7 @@ public class Interactable : NetworkBehaviour, IInteractable
     /// <summary>
     /// Returns the text display for interacting
     /// </summary>
-    public string GetText() => interactableText.Value.ToString();
+    public InteractDisplay GetDisplay() => interactableDisplay.Value;
 
 
 
@@ -109,11 +116,11 @@ public class Interactable : NetworkBehaviour, IInteractable
 
 
     /// <summary>
-    /// SERVER ONLY Set the interact text
+    /// SERVER ONLY Set the interact display
     /// </summary>
-    public void SetText(string text)
+    public void SetDisplay(InteractDisplay display)
     {
-        interactableText.Value = text;
+        interactableDisplay.Value = display;
     }
 
 

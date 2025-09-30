@@ -21,12 +21,11 @@ public class PlayerInteractor : NetworkBehaviour
     private bool canDrop = true; //this is needed so we don't throw/drop object when rotating the object
 
     private Camera playerCamera;
-    private PlayerData playerData;
 
-    private Interactable currentTarget;
+    private IInteractable currentTarget;
     private IHighlighter currentHighlighter;
 
-    public Interactable GetCurrentInteractable() => currentTarget;
+    public IInteractable GetCurrentInteractable() => currentTarget;
 
     void Start()
     {
@@ -34,7 +33,6 @@ public class PlayerInteractor : NetworkBehaviour
         if (playerCamera == null)
             Debug.LogError("No Main Camera found! Tag your camera as MainCamera.");
 
-        playerData = GetComponent<PlayerData>();
         controller = GetComponent<FirstPersonController>();
     }
 
@@ -77,12 +75,12 @@ public class PlayerInteractor : NetworkBehaviour
         Ray ray = new Ray(playerCamera.transform.position, playerCamera.transform.forward);
         RaycastHit hit;
 
-        Interactable interactable = null;
+        IInteractable interactable = null;
         IHighlighter highlighter = null;
 
         if (Physics.Raycast(ray, out hit, interactDistance, interactableLayer))
         {
-            interactable = hit.collider.GetComponent<Interactable>();
+            interactable = hit.collider.GetComponent<IInteractable>();
             highlighter = hit.collider.GetComponentInChildren<IHighlighter>();
         }
 
