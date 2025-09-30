@@ -14,7 +14,7 @@ public struct InteractDisplay : INetworkSerializeByMemcpy
     public FixedString64Bytes interactBoxTitle;
     public FixedString512Bytes interactBoxDescription;
 
-    public InteractDisplay(string text, bool showInteractBox = false, string boxTitle = null, string interactBoxBody = null)
+    public InteractDisplay(string text, bool showInteractBox = false, string boxTitle = "", string interactBoxBody = "")
     {
         interactText = text;
         this.showInteractBox = showInteractBox;

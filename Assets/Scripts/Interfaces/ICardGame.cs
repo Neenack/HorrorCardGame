@@ -5,15 +5,19 @@ using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.InputSystem.XR.Haptics;
 
-public interface ICardGame<TPlayer, TAction, TAI>
+public interface ICardGameEvents
+{
+    event Action OnGameStarted;
+    event Action OnGameEnded;
+    event Action OnAnyActionExecuted;
+    event Action OnAnyCardDrawn;
+}
+
+public interface ICardGame<TPlayer, TAction, TAI> : ICardGameEvents
     where TPlayer : TablePlayer<TPlayer, TAction, TAI>
     where TAction : struct
     where TAI : PlayerAI<TPlayer, TAction, TAI>
 {
-    event Action OnGameStarted;
-    event Action OnGameEnded;
-    event Action OnActionExecuted;
-
     IEnumerable<TPlayer> Players { get; }
     IInteractable InteractableDeck { get; }
     NetworkVariable<ulong> PileCardID { get; }

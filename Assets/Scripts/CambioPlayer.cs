@@ -355,7 +355,7 @@ public class CambioPlayer : TablePlayer<CambioPlayer, CambioActionData, CambioPl
     /// <summary>
     /// Gets the value of the playing card
     /// </summary>
-    public override int GetCardValue(PlayingCard card)
+    public static new int GetCardValue(PlayingCard card)
     {
         if (card == null) return 13;
 

@@ -54,7 +54,6 @@ public abstract class TablePlayer<TPlayer, TAction, TAI> : NetworkBehaviour
 
     #region Abstract Functions
 
-    public abstract int GetCardValue(PlayingCard card);
     public abstract bool IsPlaying();
     public abstract int GetScore();
     protected abstract TAI CreateAI();
@@ -106,7 +105,7 @@ public abstract class TablePlayer<TPlayer, TAction, TAI> : NetworkBehaviour
         game.CurrentPlayerTurnID.OnValueChanged += OnTurnChanged;
         game.OnGameStarted += Game_OnGameStarted;
         game.OnGameEnded += Game_OnGameEnded;
-        game.OnActionExecuted += Game_OnActionExecuted;
+        game.OnAnyActionExecuted += Game_OnActionExecuted;
 
         CreateAI();
     }
@@ -127,6 +126,8 @@ public abstract class TablePlayer<TPlayer, TAction, TAI> : NetworkBehaviour
         hand.ClearHand();
         handCardIds.Clear();
     }
+
+    public static int GetCardValue(PlayingCard card) => card.GetValue(true);
 
 
     #region Player Starting and Ending Turn Logic

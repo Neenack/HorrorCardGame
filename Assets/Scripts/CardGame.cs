@@ -21,7 +21,8 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
 {
     public event Action OnGameStarted;
     public event Action OnGameEnded;
-    public event Action OnActionExecuted;
+    public event Action OnAnyActionExecuted;
+    public event Action OnAnyCardDrawn;
 
     protected NetworkVariable<ulong> currentPlayerTurnId = new NetworkVariable<ulong>(
         ulong.MaxValue,
@@ -167,7 +168,6 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
 
         //Allow deck interact
         interactableDeck.SetInteractMode(InteractMode.All);
-
         interactableDeck.SetDisplay(new InteractDisplay("Pull Card"));
 
         //Setup AI players on the server
@@ -326,7 +326,7 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
             yield break;
         }
 
-        OnActionExecuted?.Invoke();
+        OnAnyActionExecuted?.Invoke();
 
         yield return new WaitForSeconds(currentPlayer.IsAI ? AIThinkingTime : 0);
     }
@@ -341,6 +341,8 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
     {
         drawnCard = CardPooler.Instance.GetCard(cardSpawnTransform.position);
         drawnCardId.Value = drawnCard.NetworkObjectId;
+
+        OnAnyCardDrawn?.Invoke();
 
         return drawnCard;
     }

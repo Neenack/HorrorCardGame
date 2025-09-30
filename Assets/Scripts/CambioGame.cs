@@ -160,6 +160,11 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
         // Position card in front of current player
         BringCardToPlayer(currentPlayer, drawnCard, cardPullPositionOffset);
 
+        //Set interact display
+        int value = CambioPlayer.GetCardValue(drawnCard);
+        if (value > 6 && (value != 13 && (drawnCard.Suit == Suit.Clubs || drawnCard.Suit == Suit.Spades)))
+            drawnCard.Interactable.SetDisplay(new InteractDisplay("Discard Card", true, "On Discard", GetAbilityString(value)));
+
         yield return new WaitForEndOfFrame();
         yield return new WaitUntil(() => drawnCard.IsMoving == false);
 
@@ -191,7 +196,7 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
             foreach (var card in player.Hand.Cards)
             {
                 card.FlipCard();
-                score += player.GetCardValue(card);
+                score += CambioPlayer.GetCardValue(card);
             }
 
             playerScores[player] = score;
@@ -226,7 +231,6 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
     #endregion
 
     #region Action Handling
-
     protected override IEnumerator ExecuteActionRoutine(CambioActionData action)
     {
         if (!IsServer)
@@ -321,7 +325,7 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
     private void DoCardAbility()
     {
         PlayingCard abilityCard = cardPile[cardPile.Count - 1];
-        int cardValue = currentPlayer.GetCardValue(abilityCard);
+        int cardValue = CambioPlayer.GetCardValue(abilityCard);
 
         if (currentPlayer.IsAI)
         {
@@ -390,7 +394,7 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
         //If you have picked 2 cards, do the ability
         if (selectedCards.Count == 2)
         {
-            int value = currentPlayer.GetCardValue(cardPile[cardPile.Count - 1]);
+            int value = CambioPlayer.GetCardValue(cardPile[cardPile.Count - 1]);
 
             if (value == 11) //CHOOSE BETWEEN CARDS
             {
@@ -468,7 +472,7 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
 
     private IEnumerator StackCoroutine(CambioPlayer playerWithCard, CambioPlayer playerWhoStacked, PlayingCard cardToStack)
     {
-        bool isCorrect = currentPlayer.GetCardValue(cardToStack) == currentPlayer.GetCardValue(cardPile[cardPile.Count - 1]);
+        bool isCorrect = CambioPlayer.GetCardValue(cardToStack) == CambioPlayer.GetCardValue(cardPile[cardPile.Count - 1]);
        
         PlaceCardOnPile(cardToStack);
 
@@ -521,6 +525,33 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
     {
         playerToRecieveCard.AddCardToHand(card);
         waitingForStackInput = false;
+    }
+
+    #endregion
+
+    #region Utility
+
+    private string GetAbilityString(int value)
+    {
+        switch (value)
+        {
+            case 6:
+            case 7:
+                return "Look at one of your cards";
+            case 8:
+            case 9:
+                return "Look at someone elses card";
+            case 10:
+                return "Choose a player to swap hands with";
+            case 11:
+                return "Compare 2 cards and choose which one to keep";
+            case 12:
+                return "Blind swap 2 cards";
+            case 13:
+                return "Look at your whole hand";
+        }
+
+        return "";
     }
 
     #endregion

@@ -45,7 +45,7 @@ public class CambioPlayerAI : PlayerAI<CambioPlayer, CambioActionData, CambioPla
             return new CambioActionData(CambioActionType.None, true, player.PlayerId);
         }
 
-        int cardValue = player.GetCardValue(DrawnCard);
+        int cardValue = CambioPlayer.GetCardValue(DrawnCard);
 
         //If card is above 5, discard
         if (cardValue > 5)
@@ -57,7 +57,7 @@ public class CambioPlayerAI : PlayerAI<CambioPlayer, CambioActionData, CambioPla
         // OR
         //If card is larger than highest known card then swap
         if (cambioPlayer.SeenCards.Count < player.Hand.Cards.Count
-            || player.GetCardValue(GetHighestSeenCard()) > player.GetCardValue(DrawnCard))
+            || CambioPlayer.GetCardValue(GetHighestSeenCard()) > CambioPlayer.GetCardValue(DrawnCard))
         {
             PlayingCard cardToRemove = GetCardtoSwap();
 
@@ -74,7 +74,7 @@ public class CambioPlayerAI : PlayerAI<CambioPlayer, CambioActionData, CambioPla
 
         if (AbilityCard == null) return new CambioActionData(CambioActionType.None, true, player.PlayerId);
 
-        int cardValue = cambioPlayer.GetCardValue(AbilityCard);
+        int cardValue = CambioPlayer.GetCardValue(AbilityCard);
         if (cardValue < 6) return new CambioActionData(CambioActionType.None, true, player.PlayerId);
 
         switch (cardValue)
@@ -156,7 +156,7 @@ public class CambioPlayerAI : PlayerAI<CambioPlayer, CambioActionData, CambioPla
     /// Finds the highest known card in player hand
     /// </summary>
     /// <returns>A playing card</returns>
-    private PlayingCard GetHighestSeenCard() => cambioPlayer.SeenCards.OrderByDescending(c => player.GetCardValue(c)).FirstOrDefault();
+    private PlayingCard GetHighestSeenCard() => cambioPlayer.SeenCards.OrderByDescending(c => CambioPlayer.GetCardValue(c)).FirstOrDefault();
 
     /// <summary>
     /// Returns a random card in a players hand
@@ -215,7 +215,7 @@ public class CambioPlayerAI : PlayerAI<CambioPlayer, CambioActionData, CambioPla
 
     public PlayingCard ChooseBetween2Cards(PlayingCard card1, PlayingCard card2)
     {
-        return player.GetCardValue(card1) < player.GetCardValue(card2) ? card1 : card2;
+        return CambioPlayer.GetCardValue(card1) < CambioPlayer.GetCardValue(card2) ? card1 : card2;
     }
 
     /// <summary>
@@ -225,7 +225,7 @@ public class CambioPlayerAI : PlayerAI<CambioPlayer, CambioActionData, CambioPla
     private bool ShouldBlindSwap()
     {
         return (player.Hand.Cards.Where(c => !cambioPlayer.SeenCards.Contains(c)).ToList().Count > 0)
-            || cambioPlayer.GetCardValue(GetHighestSeenCard()) > 6;
+            || CambioPlayer.GetCardValue(GetHighestSeenCard()) > 6;
     }
 
 
