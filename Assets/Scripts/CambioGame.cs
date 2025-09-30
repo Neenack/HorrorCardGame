@@ -54,7 +54,7 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
 
     private IEnumerator StackingRoutine()
     {
-        Debug.Log("[Server] Stacking enabled!");
+        ConsoleLog.Instance.AddLog("Stacking enabled!");
         isStacking.Value = true;
 
         yield return new WaitForSeconds(0.5f);
@@ -77,7 +77,7 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
 
         yield return new WaitUntil(() => hasStacked == false);
 
-        Debug.Log("[Server] Stacking disabled!");
+        ConsoleLog.Instance.AddLog("Stacking disabled!");
         isStacking.Value = false;
 
         DisableAllCardsAndUnsubscribe();
@@ -195,6 +195,7 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
             }
 
             playerScores[player] = score;
+            ConsoleLog.Instance.AddLog($"{player.GetName()} has a score of {score}");
             //SetScoreClientRpc(player.OwnerClientId, score);
 
             yield return new WaitForSeconds(timeBetweenPlayerReveals);
@@ -214,7 +215,7 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
 
         if (winner != null)
         {
-            Debug.Log($"{winner.GetName()} wins with score {lowestScore}!");
+            ConsoleLog.Instance.AddLog($"{winner.GetName()} wins with score {lowestScore}!");
             //AnnounceWinnerClientRpc(winner.NetworkObjectId, lowestScore);
         }
 
@@ -234,12 +235,9 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
             yield break;
         }
 
-        yield return new WaitForSeconds(currentPlayer.IsAI ? AIThinkingTime : 0);
+        yield return StartCoroutine(base.ExecuteActionRoutine(action));
 
-        if (currentPlayer.IsAI)
-            Debug.Log($"[Server] AI Player has executed Action: " + action.Type);
-        else
-            Debug.Log($"[Server] Player {currentPlayerTurnId.Value} has executed Action: " + action.Type);
+        ConsoleLog.Instance.AddLog($"{currentPlayer.GetName()} has executed Action: " + action.Type);
 
         CambioPlayer player = GetPlayerFromPlayerID(action.PlayerId);
         PlayingCard playerCard = PlayingCard.GetPlayingCardFromNetworkID(action.CardId);

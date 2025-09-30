@@ -82,11 +82,9 @@ public class Interactable : NetworkBehaviour, IInteractable
         // Client-side validation for immediate feedback
         if (!CanInteract())
         {
-            Debug.Log($"Cannot interact with {gameObject.name}");
+            //ConsoleLog.Instance.AddLog($"Cannot interact with {gameObject.name}");
             return;
         }
-
-        Debug.Log($"Player {playerID} interacted with {gameObject.name}");
 
         OnInteract?.Invoke(this, new InteractEventArgs(playerID));
 
@@ -96,7 +94,7 @@ public class Interactable : NetworkBehaviour, IInteractable
     [ServerRpc(RequireOwnership = false)]
     private void InteractNotifyServerRpc(ulong playerID)
     {
-        Debug.Log($"[Server] Player {playerID} interacted with {gameObject.name}");
+       // ConsoleLog.Instance.AddLog($"Player {playerID} interacted with {gameObject.name}");
     }
 
     /// <summary>

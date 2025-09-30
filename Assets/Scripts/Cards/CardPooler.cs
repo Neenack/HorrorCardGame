@@ -36,7 +36,7 @@ public class CardPooler : NetworkSingleton<CardPooler>
         }
 
         deck = newDeck;
-        Debug.Log($"CardPooler: Deck set to {deck}");
+        //Debug.Log($"CardPooler: Deck set to {deck}");
     }
 
     /// <summary>

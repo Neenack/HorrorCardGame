@@ -25,7 +25,7 @@ public abstract class TablePlayer<TPlayer, TAction, TAI> : NetworkBehaviour
     private NetworkList<ulong> handCardIds = new NetworkList<ulong>();
 
     protected TAI playerAI = null;
-    private bool isTurn = false;
+    protected bool isTurn = false;
 
     protected Dictionary<EventHandler<InteractEventArgs>, List<PlayingCard>> eventSubscriptionDictionary = new Dictionary<EventHandler<InteractEventArgs>, List<PlayingCard>>();
 
@@ -64,15 +64,7 @@ public abstract class TablePlayer<TPlayer, TAction, TAI> : NetworkBehaviour
 
     public override void OnNetworkSpawn()
     {
-        if (hand == null)
-        {
-            hand = new PlayerHand();
-            hand.OnHandUpdated += Hand_OnHandUpdated;
-        }
-
-        handCardIds.OnListChanged += OnHandCardIdsChanged;
-
-        //if (!IsServer && playerData != null) RequestOwnershipServerRpc();
+        ResetHand();
         if (IsServer) AssignTablePlayerID();
     }
 
@@ -100,8 +92,6 @@ public abstract class TablePlayer<TPlayer, TAction, TAI> : NetworkBehaviour
     public void SetPlayer(PlayerData data)
     {
         playerData = data;
-
-        //if (IsSpawned) RequestOwnershipServerRpc();
     }
 
     /// <summary>
@@ -114,6 +104,7 @@ public abstract class TablePlayer<TPlayer, TAction, TAI> : NetworkBehaviour
         game.CurrentPlayerTurnID.OnValueChanged += OnTurnChanged;
         game.OnGameStarted += Game_OnGameStarted;
         game.OnGameEnded += Game_OnGameEnded;
+        game.OnActionExecuted += Game_OnActionExecuted;
 
         CreateAI();
     }
@@ -128,6 +119,7 @@ public abstract class TablePlayer<TPlayer, TAction, TAI> : NetworkBehaviour
         {
             hand = new PlayerHand();
             hand.OnHandUpdated += Hand_OnHandUpdated;
+            handCardIds.OnListChanged += OnHandCardIdsChanged;
         }
 
         hand.ClearHand();
@@ -161,18 +153,16 @@ public abstract class TablePlayer<TPlayer, TAction, TAI> : NetworkBehaviour
 
     protected virtual void Game_OnGameEnded() { }
     protected virtual void Game_OnGameStarted() { }
+    protected virtual void Game_OnActionExecuted() { }
 
     protected virtual void StartPlayerTurn()
     {
         isTurn = true;
-        //Debug.Log($"{GetName()} Its your turn!");
     }
 
     protected virtual void EndPlayerTurn()
     {
         isTurn = false;
-
-        //Debug.Log($"{GetName()} turn has ended");
     }
 
     #endregion
@@ -223,7 +213,7 @@ public abstract class TablePlayer<TPlayer, TAction, TAI> : NetworkBehaviour
     /// <summary>
     /// Called when the players hand is updated
     /// </summary>
-    private void OnHandCardIdsChanged(NetworkListEvent<ulong> changeEvent)
+    protected virtual void OnHandCardIdsChanged(NetworkListEvent<ulong> changeEvent)
     {
         if (hand == null)
         {

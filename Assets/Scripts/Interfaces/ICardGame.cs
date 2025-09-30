@@ -12,6 +12,7 @@ public interface ICardGame<TPlayer, TAction, TAI>
 {
     event Action OnGameStarted;
     event Action OnGameEnded;
+    event Action OnActionExecuted;
 
     IEnumerable<TPlayer> Players { get; }
     IInteractable InteractableDeck { get; }

@@ -33,7 +33,7 @@ public class PlayerData : NetworkBehaviour
 
         if (IsServer)
         {
-            playerName.Value = OwnerClientId.ToString();
+            playerName.Value = "Player " + OwnerClientId.ToString();
         }
 
         PlayerManager.Instance.RegisterPlayer(this);

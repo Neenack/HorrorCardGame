@@ -21,6 +21,7 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
 {
     public event Action OnGameStarted;
     public event Action OnGameEnded;
+    public event Action OnActionExecuted;
 
     protected NetworkVariable<ulong> currentPlayerTurnId = new NetworkVariable<ulong>(
         ulong.MaxValue,
@@ -92,7 +93,6 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
     protected abstract IEnumerator DealInitialCards();
     protected abstract bool HasGameEnded();
     protected abstract IEnumerator ShowWinnerRoutine();
-    protected abstract IEnumerator ExecuteActionRoutine(TAction action);
     protected abstract bool CanOnlyPlayInTurn();
 
     #endregion
@@ -153,8 +153,8 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
     {
         if (!IsServer) return;
 
-        Debug.Log("[Server] Start Game!");
-        
+        ConsoleLog.Instance.AddLog("Start Game");
+
         //Change game to starting
         gameState.Value = GameState.Starting;
 
@@ -187,8 +187,6 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
 
     private void ClientStartGame()
     {
-        Debug.Log("Game started!");
-
         interactableDeck.SetInteractable(false);
 
         OnGameStarted?.Invoke();
@@ -264,12 +262,12 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
 
         if (currentPlayer.IsAI)
         {
-            Debug.Log($"[Server] {currentPlayer.PlayerId} (AI) turn!");
+            ConsoleLog.Instance.AddLog($"{currentPlayer.GetName()} (AI) turn!");
             StartCoroutine(HandleAITurn());
         }
         else
         {
-            Debug.Log($"[Server] {currentPlayer.PlayerId} turn!");
+            ConsoleLog.Instance.AddLog($"{currentPlayer.GetName()} turn!");
         }
     }
 
@@ -319,6 +317,19 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
         DisableAllCardsAndUnsubscribe();
 
         StartCoroutine(ExecuteActionRoutine(action));
+    }
+
+    protected virtual IEnumerator ExecuteActionRoutine(TAction action)
+    {
+        if (!IsServer)
+        {
+            Debug.LogWarning("[Client] Only the server can execute actions!");
+            yield break;
+        }
+
+        OnActionExecuted?.Invoke();
+
+        yield return new WaitForSeconds(currentPlayer.IsAI ? AIThinkingTime : 0);
     }
 
     #endregion

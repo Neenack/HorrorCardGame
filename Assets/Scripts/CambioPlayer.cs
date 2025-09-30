@@ -36,7 +36,6 @@ public class CambioPlayer : TablePlayer<CambioPlayer, CambioActionData, CambioPl
         scoreText?.gameObject.SetActive(false);
     }
 
-
     #region Turn Logic
 
     protected override void Game_OnGameStarted()
@@ -47,6 +46,8 @@ public class CambioPlayer : TablePlayer<CambioPlayer, CambioActionData, CambioPl
         callCambioButton?.gameObject.SetActive(false);
         skipAbilityButton?.gameObject.SetActive(false);
         scoreText?.gameObject.SetActive(false);
+
+        seenCards.Clear();
     }
     protected override void Game_OnGameEnded()
     {
@@ -56,6 +57,14 @@ public class CambioPlayer : TablePlayer<CambioPlayer, CambioActionData, CambioPl
         callCambioButton?.gameObject.SetActive(false);
         skipAbilityButton?.gameObject.SetActive(false);
         scoreText?.gameObject.SetActive(false);
+    }
+
+    protected override void Game_OnActionExecuted()
+    {
+        base.Game_OnActionExecuted();
+
+        callCambioButton?.gameObject.SetActive(false);
+        skipAbilityButton?.gameObject.SetActive(false);
     }
 
     protected override void StartPlayerTurn()
@@ -217,6 +226,7 @@ public class CambioPlayer : TablePlayer<CambioPlayer, CambioActionData, CambioPl
     {
         skipAbilityButton.gameObject.SetActive(true);
         skipAbilityButton.SetInteractable(true);
+        skipAbilityButton.OnInteract -= SkipAbilityButton_OnInteract;
         skipAbilityButton.OnInteract += SkipAbilityButton_OnInteract;
     }
 
@@ -227,7 +237,7 @@ public class CambioPlayer : TablePlayer<CambioPlayer, CambioActionData, CambioPl
         skipAbilityButton.OnInteract -= SkipAbilityButton_OnInteract;
     }
 
-    private void SkipAbilityButton_OnInteract(object sender, Interactable.InteractEventArgs e)
+    private void SkipAbilityButton_OnInteract(object sender, InteractEventArgs e)
     {
         DisableAbilityStartedInteraction();
 
@@ -355,6 +365,9 @@ public class CambioPlayer : TablePlayer<CambioPlayer, CambioActionData, CambioPl
         return value;
     }
 
+    /// <summary>
+    /// Gets the total player score for their hand
+    /// </summary>
     public override int GetScore()
     {
         int total = 0;
@@ -364,7 +377,7 @@ public class CambioPlayer : TablePlayer<CambioPlayer, CambioActionData, CambioPl
 
     #endregion
 
-    #region Card Position
+    #region Card Position (Server Only)
 
     /// <summary>
     /// Gets the position of the playing card for the player
@@ -394,7 +407,15 @@ public class CambioPlayer : TablePlayer<CambioPlayer, CambioActionData, CambioPl
 
     #region Memory
 
-    private void Hand_OnRemoveCard(PlayingCard card) => RemoveSeenCard(card);
+    protected override void OnHandCardIdsChanged(NetworkListEvent<ulong> changeEvent)
+    {
+        base.OnHandCardIdsChanged(changeEvent);
+
+        //Remove all cards which are no longer in the hand
+        seenCards = new HashSet<PlayingCard>(seenCards.Where(x => Hand.Cards.Contains(x)));
+
+        //Debug.Log($"Player {PlayerId} has seen {seenCards.Count} cards");
+    }
 
     /// <summary>
     /// Adds a card to memory
@@ -404,6 +425,8 @@ public class CambioPlayer : TablePlayer<CambioPlayer, CambioActionData, CambioPl
         if (!Hand.Cards.Contains(card) || HasSeenCard(card)) return;
 
         seenCards.Add(card);
+
+        //Debug.Log($"Player {PlayerId} has seen {seenCards.Count} cards");
     }
 
     public bool HasSeenCard(PlayingCard card) => seenCards.Contains(card);
@@ -411,10 +434,7 @@ public class CambioPlayer : TablePlayer<CambioPlayer, CambioActionData, CambioPl
     /// <summary>
     /// Removes a card from memory
     /// </summary>
-    public void RemoveSeenCard(PlayingCard card)
-    {
-        seenCards.Remove(card);
-    }
+    public void RemoveSeenCard(PlayingCard card) => seenCards.Remove(card);
 
     #endregion
 
