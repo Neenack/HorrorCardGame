@@ -476,7 +476,7 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
 
         if (playerWithCard.PlayerId == playerWhoStacked.PlayerId)
         {
-            Debug.Log($"[Server] Player tried stacking their own card! {isCorrect}");
+            ConsoleLog.Instance.AddLog($"{playerWithCard.GetName()} tried stacking their own card!");
             if (!isCorrect) //DEAL CARD BACK TO PLAYER AND ANOTHER ONE
             {
                 yield return StartCoroutine(ReturnCardFromPile(playerWithCard));
@@ -486,7 +486,7 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
         }
         else
         {
-            Debug.Log($"[Server] Player tried stacking someone elses card! {isCorrect}");
+            ConsoleLog.Instance.AddLog($"{playerWhoStacked.GetName()} tried stacking {playerWithCard.GetName()}'s card!");
 
             if (!isCorrect)
             {

@@ -229,23 +229,7 @@ public class CambioPlayerAI : PlayerAI<CambioPlayer, CambioActionData, CambioPla
     }
 
 
-    public bool CanStack()
-    {
-        PlayingCard topCard = PlayingCard.GetPlayingCardFromNetworkID(player.Game.DrawnCardID.Value);
-
-        foreach (var card in cambioPlayer.SeenCards)
-        {
-            if (card.GetValue(false) == topCard.GetValue(false))
-            {
-                //DONT STACK BLACK KINGS
-                if (card.Suit == Suit.Spades || card.Suit == Suit.Clubs) continue;
-
-                return true;
-            }
-        }
-
-        return false;
-    }
+    public bool CanStack() => GetCardToStack() != null;
 
     /// <summary>
     /// Gets a matching card to stack on the pile
@@ -255,8 +239,12 @@ public class CambioPlayerAI : PlayerAI<CambioPlayer, CambioActionData, CambioPla
     {
         PlayingCard topCard = PlayingCard.GetPlayingCardFromNetworkID(player.Game.PileCardID.Value);
 
+        if (topCard.GetValue(false) == 13 && (topCard.Suit == Suit.Spades || topCard.Suit == Suit.Clubs)) return null;
+
         foreach (var card in cambioPlayer.SeenCards)
         {
+            if (card == null) continue;
+
             if (card.GetValue(false) == topCard.GetValue(false))
             {
                 return card;

@@ -76,6 +76,8 @@ public abstract class TablePlayer<TPlayer, TAction, TAI> : NetworkBehaviour
         if (hand != null) hand.OnHandUpdated -= Hand_OnHandUpdated;
         if (game != null) game.CurrentPlayerTurnID.OnValueChanged -= OnTurnChanged;
         if (handCardIds != null) handCardIds.OnListChanged -= OnHandCardIdsChanged;
+
+        UnsubscribeAll();
     }
 
     private void AssignTablePlayerID()
@@ -173,12 +175,25 @@ public abstract class TablePlayer<TPlayer, TAction, TAI> : NetworkBehaviour
     protected void DisableHandAndUnsubscribe()
     {
         //Disable all cards in hand
-        foreach (var cardId in handCardIds)
+        foreach (var card in Hand.Cards)
         {
-            PlayingCard card = PlayingCard.GetPlayingCardFromNetworkID(cardId);
             card.Interactable.SetInteractable(false);
         }
 
+        UnsubscribeAll();
+    }
+
+    [ClientRpc]
+    public void DisableAllCardsAndUnsubscribeClientRpc()
+    {
+        DisableHandAndUnsubscribe();
+    }
+
+    /// <summary>
+    /// Unsubscribes from all known subscriptions
+    /// </summary>
+    protected void UnsubscribeAll()
+    {
         if (eventSubscriptionDictionary.Count > 0)
         {
             //Unsubscribe from all cards if any
@@ -191,12 +206,6 @@ public abstract class TablePlayer<TPlayer, TAction, TAI> : NetworkBehaviour
             }
             eventSubscriptionDictionary.Clear();
         }
-    }
-
-    [ClientRpc]
-    public void DisableAllCardsAndUnsubscribeClientRpc()
-    {
-        DisableHandAndUnsubscribe();
     }
 
 

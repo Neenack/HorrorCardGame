@@ -200,7 +200,7 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
 
     protected void ServerEndGame()
     {
-        Debug.Log("[Server] Game Finished!");
+        ConsoleLog.Instance.AddLog("Game Finished!");
 
         gameState.Value = GameState.Ended;
 
@@ -218,8 +218,6 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
 
     private void ClientEndGame()
     {
-        Debug.Log("Game ended!");
-
         interactableDeck.SetInteractable(true);
 
         OnGameEnded?.Invoke();
