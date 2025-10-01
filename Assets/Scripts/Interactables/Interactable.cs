@@ -51,10 +51,11 @@ public class Interactable : NetworkBehaviour, IInteractable
         NetworkVariableWritePermission.Server);
     }
 
+
     /// <summary>
     /// Returns the text display for interacting
     /// </summary>
-    public InteractDisplay GetDisplay() => interactableDisplay.Value;
+    public NetworkVariable<InteractDisplay> GetDisplay() => interactableDisplay;
 
 
 
@@ -89,19 +90,10 @@ public class Interactable : NetworkBehaviour, IInteractable
         // Client-side validation for immediate feedback
         if (!CanInteract())
         {
-            //ConsoleLog.Instance.AddLog($"Cannot interact with {gameObject.name}");
             return;
         }
 
         OnInteract?.Invoke(this, new InteractEventArgs(playerID));
-
-        InteractNotifyServerRpc(playerID);
-    }
-
-    [ServerRpc(RequireOwnership = false)]
-    private void InteractNotifyServerRpc(ulong playerID)
-    {
-       // ConsoleLog.Instance.AddLog($"Player {playerID} interacted with {gameObject.name}");
     }
 
     /// <summary>
@@ -130,5 +122,19 @@ public class Interactable : NetworkBehaviour, IInteractable
     public void SetInteractMode(InteractMode mode)
     {
         interactMode.Value = mode;
+    }
+
+
+    /// <summary>
+    /// SERVER ONLY Reset the interact display to default
+    /// </summary>
+    public void ResetDisplay()
+    {
+        interactableDisplay.Value = new InteractDisplay(
+            interactText,
+            showInteractBox,
+            interactBoxTitle,
+            interactBoxBody
+            );
     }
 }

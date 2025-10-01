@@ -24,13 +24,13 @@ public abstract class PlayerAI<TPlayer, TAction, TAI>
     }
 
     /// <summary>
-    /// Called when the AI needs to decide on an action with some new info (e.g., picked up card).
+    /// Called when the AI needs to decide on an action with some new info.
     /// Override as needed per game.
     /// </summary>
     public abstract TAction DecideAction(TurnContext context);
 
     /// <summary>
-    /// Returns a random other player of the same type.
+    /// Returns a random other player in the game.
     /// </summary>
     protected TPlayer GetRandomPlayer()
     {

@@ -73,8 +73,15 @@ public abstract class TablePlayer<TPlayer, TAction, TAI> : NetworkBehaviour
 
         //Unsubscribes from events
         if (hand != null) hand.OnHandUpdated -= Hand_OnHandUpdated;
-        if (game != null) game.CurrentPlayerTurnID.OnValueChanged -= OnTurnChanged;
         if (handCardIds != null) handCardIds.OnListChanged -= OnHandCardIdsChanged;
+
+        if (game != null)
+        {
+            game.CurrentPlayerTurnID.OnValueChanged -= OnTurnChanged;
+            game.OnGameStarted -= Game_OnGameStarted;
+            game.OnGameEnded -= Game_OnGameEnded;
+            game.OnAnyActionExecuted -= Game_OnActionExecuted;
+        }
 
         UnsubscribeAll();
     }
@@ -94,6 +101,8 @@ public abstract class TablePlayer<TPlayer, TAction, TAI> : NetworkBehaviour
     {
         playerData = data;
     }
+
+
 
     /// <summary>
     /// Sets the game for the table player
@@ -127,8 +136,6 @@ public abstract class TablePlayer<TPlayer, TAction, TAI> : NetworkBehaviour
         handCardIds.Clear();
     }
 
-    public static int GetCardValue(PlayingCard card) => card.GetValue(true);
-
 
     #region Player Starting and Ending Turn Logic
 
@@ -137,11 +144,11 @@ public abstract class TablePlayer<TPlayer, TAction, TAI> : NetworkBehaviour
     /// </summary>
     private void OnTurnChanged(ulong oldValue, ulong newValue)
     {
+        if (hand != null && IsServer) hand.UpdateHand();
+
         if (IsAI) return;
 
         DisableHandAndUnsubscribe();
-
-        //Debug.Log($"[Client] {gameObject.name} (ID:{tablePlayerId.Value}) is running on client: {NetworkManager.Singleton.LocalClientId} and the current turn owner id is: {game.CurrentOwnerClientTurnID.Value}");
 
         if (oldValue == PlayerId && isTurn)
         {
@@ -158,11 +165,17 @@ public abstract class TablePlayer<TPlayer, TAction, TAI> : NetworkBehaviour
     protected virtual void Game_OnGameStarted() { }
     protected virtual void Game_OnActionExecuted() { }
 
+    /// <summary>
+    /// Called when the players turn starts, and only called on the players local client
+    /// </summary>
     protected virtual void StartPlayerTurn()
     {
         isTurn = true;
     }
 
+    /// <summary>
+    /// Called when the players turn ends, and only called on the players local client
+    /// </summary>
     protected virtual void EndPlayerTurn()
     {
         isTurn = false;
@@ -171,7 +184,7 @@ public abstract class TablePlayer<TPlayer, TAction, TAI> : NetworkBehaviour
     #endregion
 
     /// <summary>
-    /// Disables all playing cards and unsubscribes from all known subscriptions
+    /// Disables all playing cards, unsubscribes from all known subscriptions and resets interact display
     /// </summary>
     protected void DisableHandAndUnsubscribe()
     {
@@ -179,16 +192,16 @@ public abstract class TablePlayer<TPlayer, TAction, TAI> : NetworkBehaviour
         foreach (var card in Hand.Cards)
         {
             card.Interactable.SetInteractable(false);
+            card.Interactable.ResetDisplay();
         }
 
         UnsubscribeAll();
     }
 
-    [ClientRpc]
-    public void DisableAllCardsAndUnsubscribeClientRpc()
-    {
-        DisableHandAndUnsubscribe();
-    }
+    /// <summary>
+    /// Disables all playing cards, unsubscribes from all known subscriptions and resets interact display
+    /// </summary>
+    [ClientRpc] public void DisableAllCardsAndUnsubscribeClientRpc() => DisableHandAndUnsubscribe();
 
     /// <summary>
     /// Unsubscribes from all known subscriptions
@@ -486,6 +499,20 @@ public abstract class TablePlayer<TPlayer, TAction, TAI> : NetworkBehaviour
         float angle = (cardIndex - (totalCards - 1) / 2f) * angleStep;
 
         return transform.rotation * Quaternion.Euler(dealingXRotation, angle, 0f);
+    }
+
+    #endregion
+
+    #region Card Interaction Display
+
+    /// <summary>
+    /// Sets the interact display for the whole hand
+    /// </summary>
+    public void SetHandInteractDisplay(InteractDisplay display)
+    {
+        if (!IsServer) return;
+
+        foreach (var card in Hand.Cards) card.Interactable.SetDisplay(display);
     }
 
     #endregion

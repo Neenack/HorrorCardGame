@@ -24,7 +24,6 @@ public class PlayerManager : NetworkSingleton<PlayerManager>
 
         playerCount.OnValueChanged += (oldValue, newValue) =>
         {
-            //Debug.Log($"[Client] Player count updated: {newValue}");
             OnPlayerCountUpdated?.Invoke();
         };
     }
@@ -34,7 +33,7 @@ public class PlayerManager : NetworkSingleton<PlayerManager>
         if (NetworkManager.Singleton.IsServer)
         {
             playerCount.Value++;
-            ConsoleLog.Instance.AddLog($"Player {clientId} connected");
+            ConsoleLog.Instance.Log($"Player {clientId} connected");
         }
 
         OnPlayerCountUpdated?.Invoke();
@@ -45,13 +44,16 @@ public class PlayerManager : NetworkSingleton<PlayerManager>
         if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsServer)
         {
             playerCount.Value--;
-            ConsoleLog.Instance.AddLog($"Player {clientId} disconnected");
+            ConsoleLog.Instance.Log($"Player {clientId} disconnected");
             players.Remove(clientId);
         }
 
         OnPlayerCountUpdated?.Invoke();
     }
 
+    /// <summary>
+    /// Registers the OwnerClientID and the playerData
+    /// </summary>
     public void RegisterPlayer(PlayerData player)
     {
         if (!players.ContainsKey(player.OwnerClientId))
@@ -60,6 +62,9 @@ public class PlayerManager : NetworkSingleton<PlayerManager>
         }
     }
 
+    /// <summary>
+    /// Gets the player data of a player from their client ID
+    /// </summary>
     public PlayerData GetPlayerDataById(ulong clientId)
     {
         if (players.TryGetValue(clientId, out PlayerData player))

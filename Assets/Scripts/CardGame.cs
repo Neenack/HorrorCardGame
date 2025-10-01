@@ -154,7 +154,7 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
     {
         if (!IsServer) return;
 
-        ConsoleLog.Instance.AddLog("Start Game");
+        ConsoleLog.Instance.Log("Start Game");
 
         //Change game to starting
         gameState.Value = GameState.Starting;
@@ -165,10 +165,6 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
         //Initialise Deck
         deck = new CardDeck(deckSO);
         CardPooler.Instance.SetDeck(deck);
-
-        //Allow deck interact
-        interactableDeck.SetInteractMode(InteractMode.All);
-        interactableDeck.SetDisplay(new InteractDisplay("Pull Card"));
 
         //Setup AI players on the server
         foreach (var player in players) if (player.IsAI) player.SetGame(this);
@@ -182,6 +178,10 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
         yield return StartCoroutine(DealInitialCards());
 
         gameState.Value = GameState.Playing;
+
+        //Allow deck interact
+        interactableDeck.SetInteractMode(InteractMode.All);
+        interactableDeck.SetDisplay(new InteractDisplay("Pull Card"));
 
         NextTurn();
     }
@@ -201,7 +201,7 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
 
     protected void ServerEndGame()
     {
-        ConsoleLog.Instance.AddLog("Game Finished!");
+        ConsoleLog.Instance.Log("Game Finished!");
 
         gameState.Value = GameState.Ended;
 
@@ -210,7 +210,7 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
         cardPile.Clear();
         topPileCardId.Value = 0;
 
-        interactableDeck.SetDisplay(new InteractDisplay("Start Game"));
+        interactableDeck.ResetDisplay();
         interactableDeck.SetInteractMode(InteractMode.Host);
 
         gameState.Value = GameState.WaitingToStart;
@@ -233,8 +233,6 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
     protected virtual IEnumerator NextTurnRoutine()
     {
         if (!IsServer) yield break;
-
-        UpdatePlayerHands();
 
         int attempts = 0;
         do
@@ -261,20 +259,19 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
 
         if (currentPlayer.IsAI)
         {
-            ConsoleLog.Instance.AddLog($"{currentPlayer.GetName()} (AI) turn!");
+            ConsoleLog.Instance.Log($"{currentPlayer.GetName()} (AI) turn!");
             StartCoroutine(HandleAITurn());
         }
         else
         {
-            ConsoleLog.Instance.AddLog($"{currentPlayer.GetName()} turn!");
+            ConsoleLog.Instance.Log($"{currentPlayer.GetName()} turn!");
         }
     }
 
-    protected void UpdatePlayerHands()
-    {
-        foreach (var player in players) player.Hand.UpdateHand();
-    }
 
+    /// <summary>
+    /// Disables and unsubscribes from every active playing card
+    /// </summary>
     protected void DisableAllCardsAndUnsubscribe()
     {
         foreach (var player in players) player.DisableAllCardsAndUnsubscribeClientRpc();
@@ -282,11 +279,14 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
 
     #region Requesting Actions
 
-    public void TryExecuteAction(ulong playerID, TAction action)
+    /// <summary>
+    /// Executes an action in the card game
+    /// </summary>
+    public void ExecuteAction(ulong playerID, TAction action)
     {
         if (IsServer)
         {
-            ServerTryExecuteAction(playerID, action);
+            ServerExecuteAction(playerID, action);
             return;
         }
 
@@ -300,12 +300,9 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
     }
 
     [ServerRpc(RequireOwnership = false)]
-    private void RequestExecuteActionServerRpc(ulong playerID, TAction action)
-    {
-        ServerTryExecuteAction(playerID, action);
-    }
+    private void RequestExecuteActionServerRpc(ulong playerID, TAction action) => ServerExecuteAction(playerID, action);
 
-    private void ServerTryExecuteAction(ulong playerID, TAction action)
+    private void ServerExecuteAction(ulong playerID, TAction action)
     {
         if (CanOnlyPlayInTurn() && currentOwnerClientTurnId.Value != playerID)
         {
@@ -313,11 +310,18 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
             return;
         }
 
+        //Disables all previous interactions with cards before executing a new action
         DisableAllCardsAndUnsubscribe();
-
         StartCoroutine(ExecuteActionRoutine(action));
     }
 
+
+
+
+
+    /// <summary>
+    /// Coroutine to execute an action in the game
+    /// </summary>
     protected virtual IEnumerator ExecuteActionRoutine(TAction action)
     {
         if (!IsServer)
@@ -337,6 +341,11 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
 
     #region Card Management
 
+
+
+    /// <summary>
+    /// Draws a new card from the deck
+    /// </summary>
     protected PlayingCard DrawCard()
     {
         drawnCard = CardPooler.Instance.GetCard(cardSpawnTransform.position);
@@ -347,6 +356,10 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
         return drawnCard;
     }
 
+
+    /// <summary>
+    /// Deals a card into the hand of a given player
+    /// </summary>
     protected virtual IEnumerator DealCardToPlayer(TPlayer player)
     {
         if (!IsServer) yield break;
@@ -362,13 +375,23 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
         yield return new WaitUntil(() => drawnCard.IsMoving == false);
     }
 
+
+    /// <summary>
+    /// Places a given card on the card pile
+    /// </summary>
     public void PlaceCardOnPile(PlayingCard card, bool placeFaceDown = false, float lerpSpeed = 5)
     {
         if (!IsServer) return;
 
+        foreach (var player in players) player.RequestSetCardInteractable(card.NetworkObjectId, false);
+
         StartCoroutine(PlaceCardOnPileCoroutine(card, placeFaceDown, lerpSpeed));
     }
 
+
+    /// <summary>
+    /// Coroutine to place a card on the card pile
+    /// </summary>
     private IEnumerator PlaceCardOnPileCoroutine(PlayingCard card, bool placeFaceDown = false, float lerpSpeed = 5f)
     {
         // Visual card movement
@@ -391,6 +414,12 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
         yield return new WaitForSeconds(timeBetweenCardDeals);
     }
 
+
+
+
+    /// <summary>
+    /// Trades a new card for a curret card in a given player
+    /// </summary>
     protected bool TryTradeCard(TPlayer target, PlayingCard cardToAdd, PlayingCard cardToDiscard)
     {
         if (cardToDiscard == null || cardToAdd == null || target == null)
@@ -409,6 +438,11 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
         return false;
     }
 
+
+
+    /// <summary>
+    /// Tries to swap the cards between 2 players
+    /// </summary>
     protected bool TrySwapCards(TPlayer player1, PlayingCard card1, TPlayer player2, PlayingCard card2)
     {
         int index1 = player1.Hand.GetIndexOfCard(card1);
@@ -429,6 +463,12 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
         return false;
     }
 
+
+
+
+    /// <summary>
+    /// Swap the hands between 2 players
+    /// </summary>
     protected void SwapHands(TPlayer player1, TPlayer player2)
     {
         List<PlayingCard> temp1Cards = new List<PlayingCard>(player1.Hand.Cards);
@@ -444,12 +484,27 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
             player2.AddCardToHand(card);
     }
 
+
+
+    /// <summary>
+    /// Returns the card from the stack to a given players hand
+    /// </summary>
+    protected IEnumerator ReturnCardFromPile(CambioPlayer player)
+    {
+        PlayingCard card = cardPile[cardPile.Count - 1];
+
+        player.AddCardToHand(card);
+        cardPile.Remove(card);
+
+        yield return new WaitUntil(() => card.IsMoving == false);
+    }
+
     #endregion
 
     #region Card Movement
 
     /// <summary>
-    /// Shows a card to a player
+    /// Brings the card to a player and faces them
     /// </summary>
     protected void BringCardToPlayer(CambioPlayer player, PlayingCard card, Vector3 offset)
     {
@@ -472,12 +527,18 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
 
     #region Player AI
 
+    /// <summary>
+    /// Coroutine to execute the start turn action for the AI
+    /// </summary>
     private IEnumerator HandleAITurn()
     {
         yield return new WaitForSeconds(AIThinkingTime);
         StartCoroutine(ExecuteActionRoutine(currentPlayer.PlayerAI.DecideAction(TurnContext.StartTurn)));
     }
 
+    /// <summary>
+    /// Coroutine to execute the action after drawing a card for the AI
+    /// </summary>
     protected IEnumerator HandleAIDrawDecision()
     {
         yield return new WaitForSeconds(AIThinkingTime);
@@ -488,22 +549,41 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
 
     #endregion
 
-    #region Helper Functions
+    #region Player Accessors
 
+
+    /// <summary>
+    /// Gets the player from the player data
+    /// </summary>
     public TPlayer GetPlayerFromData(PlayerData data)
     {
         foreach (var player in players) if (player?.PlayerData == data) return player;
         return null;
     }
 
+
+
+    /// <summary>
+    /// Gets the player from the owner client ID
+    /// </summary>
     protected TPlayer GetPlayerFromClientID(ulong clientID) => GetPlayerFromData(PlayerManager.Instance.GetPlayerDataById(clientID));
 
+
+
+    /// <summary>
+    /// Gets the player from their table ID
+    /// </summary>
     protected TPlayer GetPlayerFromPlayerID(ulong playerID)
     {
         foreach (var player in players) if (player?.PlayerId == playerID) return player;
         return null;
     }
 
+
+
+    /// <summary>
+    /// Gets the player with a specific card
+    /// </summary>
     protected TPlayer GetPlayerWithCard(PlayingCard card)
     {
         if (card == null) return null;
@@ -515,6 +595,12 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
         }
         return null;
     }
+
+
+
+    /// <summary>
+    /// Gets the player with a specific card from the network ID
+    /// </summary>
     public TPlayer GetPlayerWithCard(ulong cardNetworkId)
     {
         foreach (var player in players)
@@ -528,6 +614,9 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
 
     #region Table Seater Interface
 
+    /// <summary>
+    /// Sets the player at the table
+    /// </summary>
     public Transform TrySetPlayerAtTable(PlayerData playerData)
     {
         foreach (var player in players)

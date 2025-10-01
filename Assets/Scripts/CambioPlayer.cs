@@ -49,6 +49,7 @@ public class CambioPlayer : TablePlayer<CambioPlayer, CambioActionData, CambioPl
 
         seenCards.Clear();
     }
+
     protected override void Game_OnGameEnded()
     {
         base.Game_OnGameEnded();
@@ -86,6 +87,9 @@ public class CambioPlayer : TablePlayer<CambioPlayer, CambioActionData, CambioPl
         DisableStartTurnInteraction();
     }
 
+    /// <summary>
+    /// Returns if the player is still playing
+    /// </summary>
     public override bool IsPlaying() => !hasPlayedLastTurn.Value;
 
     #endregion
@@ -93,6 +97,10 @@ public class CambioPlayer : TablePlayer<CambioPlayer, CambioActionData, CambioPl
     #region Interaction
 
     #region Interact Event Switch
+
+    /// <summary>
+    /// When given action data, will subscribe players hand to different actions locally
+    /// </summary>
     protected override EventHandler<InteractEventArgs> GetCardOnInteractEvent(CambioActionData data)
     {
         switch (data.Type)
@@ -128,7 +136,7 @@ public class CambioPlayer : TablePlayer<CambioPlayer, CambioActionData, CambioPl
     {
         DisableStartTurnInteraction();
 
-        Game.TryExecuteAction(e.playerID, new CambioActionData(CambioActionType.CallCambio, true, PlayerId));
+        Game.ExecuteAction(e.playerID, new CambioActionData(CambioActionType.CallCambio, true, PlayerId));
     }
 
     //Called by the server
@@ -149,7 +157,7 @@ public class CambioPlayer : TablePlayer<CambioPlayer, CambioActionData, CambioPl
     {
         DisableStartTurnInteraction();
 
-        Game.TryExecuteAction(e.playerID, new CambioActionData(CambioActionType.Draw, false, PlayerId));
+        Game.ExecuteAction(e.playerID, new CambioActionData(CambioActionType.Draw, false, PlayerId));
     }
 
     private void EnableStartTurnInteraction()
@@ -187,11 +195,11 @@ public class CambioPlayer : TablePlayer<CambioPlayer, CambioActionData, CambioPl
 
         if (HandCardIDs.Contains(chosenCard.NetworkObjectId)) //Chose one of your own cards so trade
         {
-            Game.TryExecuteAction(e.playerID, new CambioActionData(CambioActionType.TradeCard, true, PlayerId, chosenCard.NetworkObjectId, PlayerId, Game.DrawnCardID.Value));
+            Game.ExecuteAction(e.playerID, new CambioActionData(CambioActionType.TradeCard, true, PlayerId, chosenCard.NetworkObjectId, PlayerId, Game.DrawnCardID.Value));
         }
         else //Chose the drawn card so discard
         {
-            Game.TryExecuteAction(e.playerID, new CambioActionData(CambioActionType.Discard, true, PlayerId, Game.DrawnCardID.Value));
+            Game.ExecuteAction(e.playerID, new CambioActionData(CambioActionType.Discard, true, PlayerId, Game.DrawnCardID.Value));
         }
     }
 
@@ -241,7 +249,7 @@ public class CambioPlayer : TablePlayer<CambioPlayer, CambioActionData, CambioPl
     {
         DisableAbilityStartedInteraction();
 
-        Game.TryExecuteAction(e.playerID, new CambioActionData(CambioActionType.None, true, PlayerId));
+        Game.ExecuteAction(e.playerID, new CambioActionData(CambioActionType.None, true, PlayerId));
     }
 
     #endregion
@@ -257,7 +265,7 @@ public class CambioPlayer : TablePlayer<CambioPlayer, CambioActionData, CambioPl
         ulong cardNetworkId = (sender as Interactable).GetComponent<PlayingCard>().NetworkObjectId;
         ulong playerWithCardId = Game.GetPlayerWithCard(cardNetworkId).PlayerId;
 
-        Game.TryExecuteAction(e.playerID, new CambioActionData(CambioActionType.RevealCard, true, Game.CurrentPlayerTurnID.Value, 0, playerWithCardId, cardNetworkId));
+        Game.ExecuteAction(e.playerID, new CambioActionData(CambioActionType.RevealCard, true, Game.CurrentPlayerTurnID.Value, 0, playerWithCardId, cardNetworkId));
     }
 
     #endregion
@@ -271,7 +279,7 @@ public class CambioPlayer : TablePlayer<CambioPlayer, CambioActionData, CambioPl
         ulong cardNetworkId = (sender as Interactable).GetComponent<PlayingCard>().NetworkObjectId;
         ulong playerWithCardId = Game.GetPlayerWithCard(cardNetworkId).PlayerId;
 
-        Game.TryExecuteAction(e.playerID, new CambioActionData(CambioActionType.SwapHand, true, Game.CurrentPlayerTurnID.Value, 0, playerWithCardId, 0));
+        Game.ExecuteAction(e.playerID, new CambioActionData(CambioActionType.SwapHand, true, Game.CurrentPlayerTurnID.Value, 0, playerWithCardId, 0));
     }
 
     #endregion
@@ -281,7 +289,7 @@ public class CambioPlayer : TablePlayer<CambioPlayer, CambioActionData, CambioPl
     private void Card_OnInteract_ChooseCard(object sender, InteractEventArgs e)
     {
         ulong cardNetworkId = (sender as Interactable).GetComponent<PlayingCard>().NetworkObjectId;
-        Game.TryExecuteAction(e.playerID, new CambioActionData(CambioActionType.SelectCard, false, Game.CurrentPlayerTurnID.Value, 0, 0, cardNetworkId));
+        Game.ExecuteAction(e.playerID, new CambioActionData(CambioActionType.SelectCard, false, Game.CurrentPlayerTurnID.Value, 0, 0, cardNetworkId));
     }
 
     #endregion
@@ -294,7 +302,7 @@ public class CambioPlayer : TablePlayer<CambioPlayer, CambioActionData, CambioPl
 
         ulong cardNetworkId = (sender as Interactable).GetComponent<PlayingCard>().NetworkObjectId;
 
-        Game.TryExecuteAction(e.playerID, new CambioActionData(CambioActionType.ChooseCard, true, Game.CurrentPlayerTurnID.Value, 0, 0, cardNetworkId));
+        Game.ExecuteAction(e.playerID, new CambioActionData(CambioActionType.ChooseCard, true, Game.CurrentPlayerTurnID.Value, 0, 0, cardNetworkId));
     }
 
     #endregion
@@ -325,6 +333,7 @@ public class CambioPlayer : TablePlayer<CambioPlayer, CambioActionData, CambioPl
             {
                 //Debug.Log($"Card with ID:{cardId} has been enabled for stacking for player with ID: {player.PlayerId}");
                 RequestSetCardInteractable(cardId, interactable, new CambioActionData(CambioActionType.Stack, false, player.PlayerId));
+                player.SetHandInteractDisplay(new InteractDisplay("", true, "Stack Card", "Try stack a matching card on the pile"));
             }
         }
     }
@@ -336,14 +345,14 @@ public class CambioPlayer : TablePlayer<CambioPlayer, CambioActionData, CambioPl
         PlayerData data = PlayerManager.Instance.GetPlayerDataById(e.playerID);
         CambioPlayer playerWithStacked = Game.GetPlayerFromData(data);
 
-        Game.TryExecuteAction(playerWithStacked.PlayerId, new CambioActionData(CambioActionType.Stack, false, playerWithStacked.PlayerId, 0, 0, cardNetworkId));
+        Game.ExecuteAction(playerWithStacked.PlayerId, new CambioActionData(CambioActionType.Stack, false, playerWithStacked.PlayerId, 0, 0, cardNetworkId));
     }
 
     private void Card_OnInteract_CorrectStack(object sender, InteractEventArgs e)
     {
         ulong cardNetworkId = (sender as Interactable).GetComponent<PlayingCard>().NetworkObjectId;
 
-        Game.TryExecuteAction(PlayerId, new CambioActionData(CambioActionType.GiveCard, false, PlayerId, 0, 0, cardNetworkId));
+        Game.ExecuteAction(PlayerId, new CambioActionData(CambioActionType.GiveCard, false, PlayerId, 0, 0, cardNetworkId));
     }
 
     #endregion
@@ -355,7 +364,7 @@ public class CambioPlayer : TablePlayer<CambioPlayer, CambioActionData, CambioPl
     /// <summary>
     /// Gets the value of the playing card
     /// </summary>
-    public static new int GetCardValue(PlayingCard card)
+    public static int GetCardValue(PlayingCard card)
     {
         if (card == null) return 13;
 
@@ -413,8 +422,6 @@ public class CambioPlayer : TablePlayer<CambioPlayer, CambioActionData, CambioPl
 
         //Remove all cards which are no longer in the hand
         seenCards = new HashSet<PlayingCard>(seenCards.Where(x => Hand.Cards.Contains(x)));
-
-        //Debug.Log($"Player {PlayerId} has seen {seenCards.Count} cards");
     }
 
     /// <summary>
@@ -425,10 +432,11 @@ public class CambioPlayer : TablePlayer<CambioPlayer, CambioActionData, CambioPl
         if (!Hand.Cards.Contains(card) || HasSeenCard(card)) return;
 
         seenCards.Add(card);
-
-        //Debug.Log($"Player {PlayerId} has seen {seenCards.Count} cards");
     }
 
+    /// <summary>
+    /// Returns if the player already knows about this card
+    /// </summary>
     public bool HasSeenCard(PlayingCard card) => seenCards.Contains(card);
 
     /// <summary>
@@ -440,6 +448,9 @@ public class CambioPlayer : TablePlayer<CambioPlayer, CambioActionData, CambioPl
 
     #region AI
 
+    /// <summary>
+    /// Initialises the Player AI
+    /// </summary>
     protected override CambioPlayerAI CreateAI() => playerAI = new CambioPlayerAI(this);
 
     #endregion

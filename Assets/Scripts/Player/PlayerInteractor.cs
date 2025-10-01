@@ -5,7 +5,7 @@ using UnityEngine;
 
 public class PlayerInteractor : NetworkBehaviour
 {
-    private FirstPersonController controller;
+    public event Action OnInteractTargetUpdated;
 
     [Header("Interaction Settings")]
     [SerializeField] private float interactDistance = 5f;
@@ -15,10 +15,9 @@ public class PlayerInteractor : NetworkBehaviour
 
     [Header("Pickup Settings")]
     [SerializeField] private float throwForce = 500f; //force at which the object is thrown at
-    [SerializeField] private float rotationSensitivity = 1f; //how fast/slow the object is rotated in relation to mouse movement
     private GameObject heldObj; //object which we pick up
     private Rigidbody heldObjRb; //rigidbody of object we pick up
-    private bool canDrop = true; //this is needed so we don't throw/drop object when rotating the object
+
 
     private Camera playerCamera;
 
@@ -32,8 +31,6 @@ public class PlayerInteractor : NetworkBehaviour
         playerCamera = Camera.main;
         if (playerCamera == null)
             Debug.LogError("No Main Camera found! Tag your camera as MainCamera.");
-
-        controller = GetComponent<FirstPersonController>();
     }
 
     void Update()
@@ -45,8 +42,7 @@ public class PlayerInteractor : NetworkBehaviour
         if (heldObj != null) //if player is holding object
         {
             MoveObject(); //keep object position at holdPos
-            RotateObject();
-            if (Input.GetKeyDown(KeyCode.Mouse1) && canDrop == true) //Mous1 (rightclick) is used to throw, change this if you want another button to be used)
+            if (Input.GetKeyDown(KeyCode.Mouse1)) //Mous1 (rightclick) is used to throw, change this if you want another button to be used)
             {
                 StopClipping();
                 ThrowObject();
@@ -98,11 +94,18 @@ public class PlayerInteractor : NetworkBehaviour
                 }
 
                 currentTarget = interactable;
+                OnInteractTargetUpdated?.Invoke();
             }
             return;
         }
-
-        ClearHighlight();
+        else
+        {
+            if (currentTarget != null)
+            {
+                ClearHighlight();
+                OnInteractTargetUpdated?.Invoke();
+            }
+        }
     }
 
     private void ClearHighlight()
@@ -146,31 +149,6 @@ public class PlayerInteractor : NetworkBehaviour
     {
         //keep object position the same as the holdPosition position
         heldObj.transform.position = holdPos.transform.position;
-    }
-
-    void RotateObject()
-    {
-        if (Input.GetKey(KeyCode.R))//hold R key to rotate, change this to whatever key you want
-        {
-            canDrop = false; //make sure throwing can't occur during rotating
-
-            //disable player being able to look around
-            //mouseLookScript.verticalSensitivity = 0f;
-            //mouseLookScript.lateralSensitivity = 0f;
-
-            float XaxisRotation = Input.GetAxis("Mouse X") * rotationSensitivity;
-            float YaxisRotation = Input.GetAxis("Mouse Y") * rotationSensitivity;
-            //rotate the object depending on mouse X-Y Axis
-            heldObj.transform.Rotate(Vector3.down, XaxisRotation);
-            heldObj.transform.Rotate(Vector3.right, YaxisRotation);
-        }
-        else
-        {
-            //re-enable player being able to look around
-            //mouseLookScript.verticalSensitivity = originalvalue;
-            //mouseLookScript.lateralSensitivity = originalvalue;
-            canDrop = true;
-        }
     }
 
     void ThrowObject()

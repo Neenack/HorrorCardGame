@@ -33,9 +33,9 @@ public interface IInteractable
     public void SetInteractMode(InteractMode mode);
     public void Interact(ulong playerID);
 
-    //public string GetText();
-    //public void SetText(string text);
 
-    public InteractDisplay GetDisplay();
+
+    public NetworkVariable<InteractDisplay> GetDisplay();
     public void SetDisplay(InteractDisplay display);
+    public void ResetDisplay();
 }

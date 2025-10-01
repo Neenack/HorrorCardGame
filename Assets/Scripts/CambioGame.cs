@@ -44,17 +44,17 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
         if (currentPlayer) currentPlayer.hasPlayedLastTurn.Value = Players.Any(p => !p.IsPlaying());
 
         //Stacking
-        if (currentPlayer != null && cardStacking)
-        {
-            yield return StartCoroutine(StackingRoutine());
-        }
+        if (currentPlayer != null && cardStacking) yield return StartCoroutine(StackingRoutine());
 
         StartCoroutine(base.NextTurnRoutine());
     }
 
+    /// <summary>
+    /// If stacking is enabled, runs the stacking coroutine between turns to allow player to stack cards
+    /// </summary>
     private IEnumerator StackingRoutine()
     {
-        ConsoleLog.Instance.AddLog("Stacking enabled!");
+        ConsoleLog.Instance.Log("Stacking enabled!");
         isStacking.Value = true;
 
         yield return new WaitForSeconds(0.5f);
@@ -75,20 +75,27 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
 
         yield return new WaitForSeconds(stackingTime / 2);
 
+        //Waits until players have finished the stacking routine if someone stacked a card
         yield return new WaitUntil(() => hasStacked == false);
 
-        ConsoleLog.Instance.AddLog("Stacking disabled!");
+        ConsoleLog.Instance.Log("Stacking disabled!");
         isStacking.Value = false;
 
         DisableAllCardsAndUnsubscribe();
     }
 
+    /// <summary>
+    /// Asks if players are allowed to interact with the game out of turn
+    /// </summary>
     protected override bool CanOnlyPlayInTurn() => !isStacking.Value;
 
     #endregion
 
     #region Card Dealing
 
+    /// <summary>
+    /// Dealing inital cards on game start
+    /// </summary>
     protected override IEnumerator DealInitialCards()
     {
         if (!IsServer) yield break;
@@ -123,6 +130,9 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
         yield return new WaitForSeconds(cardViewingTime);
     }
 
+    /// <summary>
+    /// Reveals a given card o a given player
+    /// </summary>
     private IEnumerator RevealCardCoroutine(PlayingCard card, CambioPlayer player, Vector3 basePos)
     {
         Vector3 originalPos = card.transform.position;
@@ -139,6 +149,10 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
 
         player.TryAddSeenCard(card);
     }
+
+    /// <summary>
+    /// Reveals the hand of a given player
+    /// </summary>
     private IEnumerator RevealPlayerHand(CambioPlayer player)
     {
         for (int i = 0; i < player.Hand.Cards.Count; i++)
@@ -151,7 +165,9 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
         yield return new WaitForSeconds(cardViewingTime);
     }
 
-
+    /// <summary>
+    /// Deals a card to the player, shows it to them and allows for them to decide what to do
+    /// </summary>
     protected override IEnumerator DealCardToPlayer(CambioPlayer player)
     {
         //Draw new card
@@ -160,10 +176,7 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
         // Position card in front of current player
         BringCardToPlayer(currentPlayer, drawnCard, cardPullPositionOffset);
 
-        //Set interact display
-        int value = CambioPlayer.GetCardValue(drawnCard);
-        if (value > 6 && (value != 13 && (drawnCard.Suit == Suit.Clubs || drawnCard.Suit == Suit.Spades)))
-            drawnCard.Interactable.SetDisplay(new InteractDisplay("Discard Card", true, "On Discard", GetAbilityString(value)));
+        SetInteractDisplayOnDrawCard(player);
 
         yield return new WaitForEndOfFrame();
         yield return new WaitUntil(() => drawnCard.IsMoving == false);
@@ -178,13 +191,29 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
         else StartCoroutine(HandleAIDrawDecision());
     }
 
+    /// <summary>
+    /// Sets the interact display of each card when drawing a card
+    /// </summary>
+    private void SetInteractDisplayOnDrawCard(CambioPlayer player)
+    {
+        drawnCard.Interactable.SetDisplay(new InteractDisplay("", true, "Discard", GetAbilityString(drawnCard)));
+        player.SetHandInteractDisplay(new InteractDisplay("", true, "Swap Card", $"Swap card for the {drawnCard.ToString()}"));
+    }
+
     #endregion
 
     #region Game Ended
 
-    //Game ends when there is nobody left playing
+    /// <summary>
+    /// Checks for game end, ends when no players are left playing
+    /// </summary>
     protected override bool HasGameEnded() => !players.Exists(player => player.IsPlaying());
 
+
+
+    /// <summary>
+    /// Shows the winner
+    /// </summary>
     protected override IEnumerator ShowWinnerRoutine()
     {
         // Reveal all cards and calculate scores
@@ -200,7 +229,7 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
             }
 
             playerScores[player] = score;
-            ConsoleLog.Instance.AddLog($"{player.GetName()} has a score of {score}");
+            ConsoleLog.Instance.Log($"{player.GetName()} has a score of {score}");
             //SetScoreClientRpc(player.OwnerClientId, score);
 
             yield return new WaitForSeconds(timeBetweenPlayerReveals);
@@ -220,7 +249,7 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
 
         if (winner != null)
         {
-            ConsoleLog.Instance.AddLog($"{winner.GetName()} wins with score {lowestScore}!");
+            ConsoleLog.Instance.Log($"{winner.GetName()} wins with score {lowestScore}!");
             //AnnounceWinnerClientRpc(winner.NetworkObjectId, lowestScore);
         }
 
@@ -241,7 +270,7 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
 
         yield return StartCoroutine(base.ExecuteActionRoutine(action));
 
-        ConsoleLog.Instance.AddLog($"{currentPlayer.GetName()} has executed Action: " + action.Type);
+        ConsoleLog.Instance.Log($"{currentPlayer.GetName()} has executed Action: " + action.Type);
 
         CambioPlayer player = GetPlayerFromPlayerID(action.PlayerId);
         PlayingCard playerCard = PlayingCard.GetPlayingCardFromNetworkID(action.CardId);
@@ -322,6 +351,11 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
         if (action.EndsTurn) NextTurn();
     }
 
+
+
+    /// <summary>
+    /// Will enable interaction for the player to execute the card ability, AI will ask for decision before executing
+    /// </summary>
     private void DoCardAbility()
     {
         PlayingCard abilityCard = cardPile[cardPile.Count - 1];
@@ -346,6 +380,7 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
             case 7:
                 Debug.Log("Look at your own card!");
                 currentPlayer.RequestSetHandInteractable(true, new CambioActionData(CambioActionType.RevealCard, true, currentPlayer.PlayerId));
+                currentPlayer.SetHandInteractDisplay(new InteractDisplay("", true, "Reveal Card", "Shows you the playing card"));
                 break;
             case 8:
             case 9:
@@ -355,6 +390,7 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
                 {
                     if (player == currentPlayer) continue;
                     player.RequestSetHandInteractable(true, new CambioActionData(CambioActionType.RevealCard, true, currentPlayer.PlayerId));
+                    player.SetHandInteractDisplay(new InteractDisplay("", true, "Reveal Card", "Shows you the playing card"));
                 }
                 break;
             case 10:
@@ -364,15 +400,18 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
                 {
                     if (player == currentPlayer) continue;
                     player.RequestSetHandInteractable(true, new CambioActionData(CambioActionType.SwapHand, true, currentPlayer.PlayerId));
+                    player.SetHandInteractDisplay(new InteractDisplay("", true, "Swap Hand", $"Swap your whole hand with {player.GetName()}"));
                 }
                 break;
             case 11:
                 Debug.Log("Choose 2 cards to decide to swap");
                 currentPlayer.RequestSetHandInteractable(true, new CambioActionData(CambioActionType.SelectCard, false, currentPlayer.PlayerId));
+                currentPlayer.SetHandInteractDisplay(new InteractDisplay("", true, "Compare Cards", "Select a card to compare"));
                 break;
             case 12:
                 Debug.Log("Blind swap!");
                 currentPlayer.RequestSetHandInteractable(true, new CambioActionData(CambioActionType.SelectCard, false, currentPlayer.PlayerId));
+                currentPlayer.SetHandInteractDisplay(new InteractDisplay("", true, "Blind Swap", "Select a card to swap"));
                 break;
 
             case 13:
@@ -386,6 +425,9 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
 
     #region Card Management
 
+    /// <summary>
+    /// Selects a card to be compared or swapped.
+    /// </summary>
     private void SelectCard(PlayingCard card)
     {
         selectedCards.Add(card);
@@ -427,7 +469,9 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
         }
     }
 
-    //Called after given the choice between the selected cards and has chosen one
+    /// <summary>
+    /// Current player has chosen a card to keep
+    /// </summary>
     private void ChooseCard(PlayingCard chosenCard)
     {
         PlayingCard otherCard = selectedCards.First(c => c != chosenCard);
@@ -445,6 +489,9 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
 
     }
 
+    /// <summary>
+    /// Brings 2 cards to the given player to chooose from
+    /// </summary>
     private void BringCardsToPlayerToChoose(CambioPlayer player, PlayingCard card1, PlayingCard card2)
     {
         BringCardToPlayer(player, card1, new Vector3(-0.2f, cardPullPositionOffset.y, cardPullPositionOffset.z));
@@ -455,6 +502,9 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
 
     #region Stacking
 
+    /// <summary>
+    /// Called when a player stacks a card
+    /// </summary>
     private void StackCard(CambioPlayer playerWhoStacked, PlayingCard cardToStack)
     {
         if (hasStacked) return;
@@ -480,7 +530,7 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
 
         if (playerWithCard.PlayerId == playerWhoStacked.PlayerId)
         {
-            ConsoleLog.Instance.AddLog($"{playerWithCard.GetName()} tried stacking their own card!");
+            ConsoleLog.Instance.Log($"{playerWithCard.GetName()} tried stacking their own card!");
             if (!isCorrect) //DEAL CARD BACK TO PLAYER AND ANOTHER ONE
             {
                 yield return StartCoroutine(ReturnCardFromPile(playerWithCard));
@@ -490,7 +540,7 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
         }
         else
         {
-            ConsoleLog.Instance.AddLog($"{playerWhoStacked.GetName()} tried stacking {playerWithCard.GetName()}'s card!");
+            ConsoleLog.Instance.Log($"{playerWhoStacked.GetName()} tried stacking {playerWithCard.GetName()}'s card!");
 
             if (!isCorrect)
             {
@@ -511,15 +561,6 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
         hasStacked = false;
     }
 
-    private IEnumerator ReturnCardFromPile(CambioPlayer player)
-    {
-        PlayingCard card = cardPile[cardPile.Count - 1];
-
-        player.AddCardToHand(card);
-        cardPile.Remove(card);
-
-        yield return new WaitUntil(() => card.IsMoving == false);
-    }
 
     private void GiveStackCard(PlayingCard card)
     {
@@ -531,10 +572,15 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
 
     #region Utility
 
-    private string GetAbilityString(int value)
+    /// <summary>
+    /// Gets the string ability for a given card
+    /// </summary>
+    private string GetAbilityString(PlayingCard card)
     {
-        switch (value)
+        switch (CambioPlayer.GetCardValue(card))
         {
+            case < 6:
+                return "Does nothing";
             case 6:
             case 7:
                 return "Look at one of your cards";
@@ -548,7 +594,8 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
             case 12:
                 return "Blind swap 2 cards";
             case 13:
-                return "Look at your whole hand";
+                if (card.Suit == Suit.Spades || card.Suit == Suit.Clubs) return "Does nothing";
+                else return "Look at your whole hand";
         }
 
         return "";

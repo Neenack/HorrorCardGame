@@ -1,7 +1,9 @@
+using System;
 using TMPro;
+using Unity.Netcode;
 using UnityEngine;
 
-public class PlayerInteractUI : MonoBehaviour
+public class PlayerInteractUI : NetworkBehaviour
 {
     [SerializeField] private PlayerInteractor interactor;
     [SerializeField] private TextMeshProUGUI interactText;
@@ -11,30 +13,48 @@ public class PlayerInteractUI : MonoBehaviour
     [SerializeField] private TextMeshProUGUI interactBoxTitle;
     [SerializeField] private TextMeshProUGUI interactBoxBody;
 
+    private IInteractable interactable;
 
-    private void Update()
+    private void Awake()
     {
-        IInteractable interactable = interactor.GetCurrentInteractable();
+        DisableUI();
+    }
+
+    public override void OnNetworkSpawn()
+    {
+        interactor.OnInteractTargetUpdated += Interactor_OnInteractTargetUpdated;
+    }
+
+    public override void OnNetworkDespawn()
+    {
+        interactor.OnInteractTargetUpdated -= Interactor_OnInteractTargetUpdated;
+    }
+
+    private void DisableUI()
+    {
+        interactText.text = "";
+        interactBox.SetActive(false);
+    }
+
+    private void Interactor_OnInteractTargetUpdated()
+    {
+        interactable = interactor.GetCurrentInteractable();
 
         if (interactable != null)
         {
-            InteractDisplay display = interactable.GetDisplay();
-
-            interactText.gameObject.SetActive(true);
-            interactText.text = display.interactText.ToString();
-
-            if (display.showInteractBox)
-            {
-                interactBox.gameObject.SetActive(true);
-                interactBoxTitle.text = display.interactBoxTitle.ToString();
-                interactBoxBody.text = display.interactBoxDescription.ToString();
-            }
-            else interactBox.gameObject.SetActive(false);
+            SetDisplay(interactable.GetDisplay().Value);
         }
         else
         {
-            interactText.gameObject.SetActive(false);
-            interactBox.gameObject.SetActive(false);
+            DisableUI();
         }
+    }
+
+    private void SetDisplay(InteractDisplay display)
+    {
+        interactText.text = display.interactText.ToString();
+        interactBox.SetActive(display.showInteractBox);
+        interactBoxTitle.text = display.interactBoxTitle.ToString();
+        interactBoxBody.text = display.interactBoxDescription.ToString();
     }
 }

@@ -12,6 +12,9 @@ public class CambioPlayerAI : PlayerAI<CambioPlayer, CambioActionData, CambioPla
         cambioPlayer = playerRef;
     }
 
+    /// <summary>
+    /// Given game context will return the action data to execute in the game
+    /// </summary>
     public override CambioActionData DecideAction(TurnContext context)
     {
         //UnityEngine.Debug.Log("Action Requested: " + context.ToString());
@@ -95,7 +98,7 @@ public class CambioPlayerAI : PlayerAI<CambioPlayer, CambioActionData, CambioPla
                 {
                     return new CambioActionData(CambioActionType.SwapHand, true, player.PlayerId, 0, GetRandomPlayer().PlayerId, 0);
                 }
-                Debug.Log("AI: Chose not to swap");
+                ConsoleLog.Instance.Log($"{player.GetName()} (AI) Chose not to swap hands");
                 break;
 
             case 11: //COMPARE 2 AND CHOOSE 1 TO KEEP
@@ -108,14 +111,14 @@ public class CambioPlayerAI : PlayerAI<CambioPlayer, CambioActionData, CambioPla
                     otherPlayer = GetRandomPlayer();
                     return new CambioActionData(CambioActionType.SwapCard, true, player.PlayerId, GetCardtoSwap().NetworkObjectId, otherPlayer.PlayerId, GetRandomCard(otherPlayer).NetworkObjectId);
                 }
-                Debug.Log("Chose not to swap");
+                ConsoleLog.Instance.Log($"{player.GetName()} (AI) Chose not to swap cards");
                 break;
 
             case 13: //RED KING REVEAL WHOLE HAND
                 if (AbilityCard.Suit == Suit.Diamonds || AbilityCard.Suit == Suit.Hearts)
                 {
                     //Debug.Log("AI: Reveal whole hand");
-                    return new CambioActionData(CambioActionType.RevealHand, false, player.PlayerId, 0, player.PlayerId, 0);
+                    return new CambioActionData(CambioActionType.RevealHand, true, player.PlayerId, 0, player.PlayerId, 0);
                 }
                 break;
         }
@@ -128,7 +131,7 @@ public class CambioPlayerAI : PlayerAI<CambioPlayer, CambioActionData, CambioPla
         if (CanStack())
         {
             PlayingCard cardToStack = GetCardToStack();
-            return new CambioActionData(CambioActionType.Stack, false, player.PlayerId, cardToStack.NetworkObjectId, player.PlayerId, cardToStack.NetworkObjectId);
+            if (cardToStack != null) return new CambioActionData(CambioActionType.Stack, false, player.PlayerId, cardToStack.NetworkObjectId, player.PlayerId, cardToStack.NetworkObjectId);
         }
 
         return new CambioActionData(CambioActionType.None, false, player.PlayerId);
@@ -152,17 +155,26 @@ public class CambioPlayerAI : PlayerAI<CambioPlayer, CambioActionData, CambioPla
         return false;
     }
 
+
+
+
     /// <summary>
     /// Finds the highest known card in player hand
     /// </summary>
     /// <returns>A playing card</returns>
     private PlayingCard GetHighestSeenCard() => cambioPlayer.SeenCards.OrderByDescending(c => CambioPlayer.GetCardValue(c)).FirstOrDefault();
 
+
+
+
     /// <summary>
     /// Returns a random card in a players hand
     /// </summary>
     /// <returns>A random playing card</returns>
     private PlayingCard GetRandomCard(CambioPlayer player) => player.Hand.GetRandomCard();
+
+
+
 
     /// <summary>
     /// Chooses a card the AI would most like to swap out
@@ -221,15 +233,18 @@ public class CambioPlayerAI : PlayerAI<CambioPlayer, CambioActionData, CambioPla
     /// <summary>
     /// Asks the AI if it would like to blind swap 2 cards
     /// </summary>
-    /// <returns>True if the player would like to blind swap</returns>
+    /// <returns>True if the AI would like to blind swap</returns>
     private bool ShouldBlindSwap()
     {
         return (player.Hand.Cards.Where(c => !cambioPlayer.SeenCards.Contains(c)).ToList().Count > 0)
             || CambioPlayer.GetCardValue(GetHighestSeenCard()) > 6;
     }
 
-
+    /// <summary>
+    /// Asks the AI if it knows any cards that can be stacked
+    /// </summary>
     public bool CanStack() => GetCardToStack() != null;
+
 
     /// <summary>
     /// Gets a matching card to stack on the pile

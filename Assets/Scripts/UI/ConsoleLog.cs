@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using TMPro;
+using Unity.Netcode;
 
 public class ConsoleLog : NetworkSingleton<ConsoleLog>
 {
@@ -30,8 +31,13 @@ public class ConsoleLog : NetworkSingleton<ConsoleLog>
         }
     }
 
-    public void AddLog(string message)
+    /// <summary>
+    /// Adds a log to the console
+    /// </summary>
+    public void Log(string message)
     {
+        if (!IsServer) return;
+
         if (IsServer) message = $"[Server] {message}";
 
         // Add new message

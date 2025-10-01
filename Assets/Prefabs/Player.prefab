@@ -50,6 +50,61 @@ CanvasGroup:
   m_Interactable: 1
   m_BlocksRaycasts: 1
   m_IgnoreParentGroups: 0
+--- !u!1 &1463680116073777298
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 3207631020261260341}
+  - component: {fileID: 5589903092365802023}
+  m_Layer: 0
+  m_Name: Interact
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &3207631020261260341
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1463680116073777298}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 47566250287711666}
+  - {fileID: 8207429265590602983}
+  m_Father: {fileID: 5713004162148944417}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 1, y: 1}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 0, y: 0}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &5589903092365802023
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1463680116073777298}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b0bd65a78af5766458f23cfe8b89a3c4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerInteractUI
+  interactor: {fileID: 5723288935586635872}
+  interactText: {fileID: 4634349554249417208}
+  interactBox: {fileID: 7706244462996174077}
+  interactBoxTitle: {fileID: 2485638692870771836}
+  interactBoxBody: {fileID: 8873060900466569152}
 --- !u!1 &2044496411846633018
 GameObject:
   m_ObjectHideFlags: 0
@@ -565,7 +620,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 8207429265590602983}
-  - component: {fileID: 3083463264355084778}
   m_Layer: 0
   m_Name: InteractorIndicator
   m_TagString: Untagged
@@ -580,37 +634,19 @@ RectTransform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 3924697586580236746}
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 8801838871080491462}
-  - {fileID: 47566250287711666}
-  m_Father: {fileID: 5713004162148944417}
+  m_Father: {fileID: 3207631020261260341}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
---- !u!114 &3083463264355084778
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3924697586580236746}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: b0bd65a78af5766458f23cfe8b89a3c4, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::PlayerInteractUI
-  interactor: {fileID: 5723288935586635872}
-  interactText: {fileID: 4634349554249417208}
-  interactBox: {fileID: 7706244462996174077}
-  interactBoxTitle: {fileID: 2485638692870771836}
-  interactBoxBody: {fileID: 8873060900466569152}
 --- !u!1 &4742538805005735491
 GameObject:
   m_ObjectHideFlags: 0
@@ -1214,19 +1250,19 @@ RectTransform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 7706244462996174077}
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 8610559066807959571}
   - {fileID: 8085978786852199640}
-  m_Father: {fileID: 8207429265590602983}
+  m_Father: {fileID: 3207631020261260341}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -126, y: 0}
-  m_SizeDelta: {x: 150, y: 100}
+  m_AnchorMin: {x: 0.5, y: 0}
+  m_AnchorMax: {x: 0.5, y: 0}
+  m_AnchoredPosition: {x: 0, y: 60}
+  m_SizeDelta: {x: 250, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &5845111851034887744
 CanvasRenderer:
@@ -1249,7 +1285,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 0.4528302, g: 0.4528302, b: 0.4528302, a: 0.19607843}
+  m_Color: {r: 0.4528302, g: 0.4528302, b: 0.4528302, a: 0.39215687}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -1298,7 +1334,7 @@ RectTransform:
   m_Children:
   - {fileID: 4812637009944585466}
   - {fileID: 6508208833177180164}
-  - {fileID: 8207429265590602983}
+  - {fileID: 3207631020261260341}
   m_Father: {fileID: 6867616728666422861}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
@@ -1785,7 +1821,6 @@ MonoBehaviour:
     m_Bits: 8
   interactKey: 323
   throwForce: 500
-  rotationSensitivity: 1
 --- !u!114 &1303578657807395273
 MonoBehaviour:
   m_ObjectHideFlags: 0
