@@ -253,14 +253,13 @@ public class CambioPlayerAI : PlayerAI<CambioPlayer, CambioActionData, CambioPla
     public PlayingCard GetCardToStack()
     {
         PlayingCard topCard = PlayingCard.GetPlayingCardFromNetworkID(player.Game.PileCardID.Value);
-
-        if (topCard.GetValue(false) == 13 && (topCard.Suit == Suit.Spades || topCard.Suit == Suit.Clubs)) return null;
+        if (topCard == null) return null;
 
         foreach (var card in cambioPlayer.SeenCards)
         {
             if (card == null) continue;
 
-            if (card.GetValue(false) == topCard.GetValue(false))
+            if (card.GetValue(false) == topCard.GetValue(false) && !(card.GetValue(false) == 13 && (topCard.Suit == Suit.Spades || topCard.Suit == Suit.Clubs)))
             {
                 return card;
             }

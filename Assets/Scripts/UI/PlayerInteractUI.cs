@@ -42,7 +42,7 @@ public class PlayerInteractUI : NetworkBehaviour
 
         if (interactable != null)
         {
-            SetDisplay(interactable.GetDisplay().Value);
+            SetDisplay(interactable.GetDisplay());
         }
         else
         {

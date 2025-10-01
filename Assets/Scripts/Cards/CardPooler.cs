@@ -55,11 +55,9 @@ public class CardPooler : NetworkSingleton<CardPooler>
     {
         if (!IsServer || availableCards.Count > 0) yield break;
 
-        //Debug.Log($"CardPooler: Initializing pool with {deck.Count / 2} cards...");
+        ConsoleLog.Instance.Log("Initialising Card Pool");
 
-        yield return StartCoroutine(CreateCards(deck.Count / 2));
-
-        //Debug.Log($"CardPooler: Pool initialized! Available: {AvailableCount}");
+        yield return StartCoroutine(CreateCards(deck.Count));
     }
 
     /// <summary>

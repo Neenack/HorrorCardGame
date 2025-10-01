@@ -150,7 +150,7 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
         ServerStartGame();
     }
 
-    private void ServerStartGame()
+    protected virtual void ServerStartGame()
     {
         if (!IsServer) return;
 
@@ -199,7 +199,7 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
     #region End Logic
 
 
-    protected void ServerEndGame()
+    protected virtual void ServerEndGame()
     {
         ConsoleLog.Instance.Log("Game Finished!");
 
@@ -207,8 +207,12 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
 
         CardPooler.Instance.ReturnAllActiveCards();
 
+        foreach (var player in players) player.ResetHand();
+
         cardPile.Clear();
         topPileCardId.Value = 0;
+
+        currentPlayer = null;
 
         interactableDeck.ResetDisplay();
         interactableDeck.SetInteractMode(InteractMode.Host);
@@ -233,6 +237,8 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
     protected virtual IEnumerator NextTurnRoutine()
     {
         if (!IsServer) yield break;
+
+        foreach (var player in players) player.Hand.UpdateHand();
 
         int attempts = 0;
         do

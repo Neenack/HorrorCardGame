@@ -55,7 +55,7 @@ public class Interactable : NetworkBehaviour, IInteractable
     /// <summary>
     /// Returns the text display for interacting
     /// </summary>
-    public NetworkVariable<InteractDisplay> GetDisplay() => interactableDisplay;
+    public InteractDisplay GetDisplay() => interactableDisplay.Value;
 
 
 

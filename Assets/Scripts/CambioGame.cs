@@ -32,6 +32,18 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
 
     private List<PlayingCard> selectedCards = new List<PlayingCard>();
 
+    #region Start Game
+
+    protected override void ServerStartGame()
+    {
+        foreach (var player in players) player.hasPlayedLastTurn.Value = false;
+
+        base.ServerStartGame();
+    }
+
+    #endregion
+
+
     #region Turn Management
 
     protected override IEnumerator NextTurnRoutine()
@@ -44,7 +56,7 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
         if (currentPlayer) currentPlayer.hasPlayedLastTurn.Value = Players.Any(p => !p.IsPlaying());
 
         //Stacking
-        if (currentPlayer != null && cardStacking) yield return StartCoroutine(StackingRoutine());
+        if (cardStacking && cardPile.Count > 0) yield return StartCoroutine(StackingRoutine());
 
         StartCoroutine(base.NextTurnRoutine());
     }
@@ -323,6 +335,7 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
 
             case CambioActionType.CompareCards:
                 BringCardsToPlayerToChoose(player, playerCard, targetCard);
+                player.TryAddSeenCard(targetCard);
                 if (!currentPlayer.IsAI)
                 {
                     currentPlayer.RequestSetCardInteractable(playerCard.NetworkObjectId, true, new CambioActionData(CambioActionType.CompareCards, true, currentPlayer.PlayerId));
@@ -522,8 +535,9 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
 
     private IEnumerator StackCoroutine(CambioPlayer playerWithCard, CambioPlayer playerWhoStacked, PlayingCard cardToStack)
     {
-        bool isCorrect = CambioPlayer.GetCardValue(cardToStack) == CambioPlayer.GetCardValue(cardPile[cardPile.Count - 1]);
-       
+        bool isCorrect = cardToStack.GetValue(false) == cardPile[cardPile.Count - 1].GetValue(false);
+
+
         PlaceCardOnPile(cardToStack);
 
         yield return new WaitForSeconds(1f);

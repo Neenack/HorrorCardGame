@@ -144,8 +144,6 @@ public abstract class TablePlayer<TPlayer, TAction, TAI> : NetworkBehaviour
     /// </summary>
     private void OnTurnChanged(ulong oldValue, ulong newValue)
     {
-        if (hand != null && IsServer) hand.UpdateHand();
-
         if (IsAI) return;
 
         DisableHandAndUnsubscribe();

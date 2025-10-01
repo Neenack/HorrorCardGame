@@ -10,6 +10,7 @@ using UnityEngine;
 using UnityEngine.UIElements;
 using UnityEngine.XR;
 using static Interactable;
+using static UnityEditor.Experimental.GraphView.GraphView;
 
 public class CambioPlayer : TablePlayer<CambioPlayer, CambioActionData, CambioPlayerAI>
 {
@@ -19,7 +20,6 @@ public class CambioPlayer : TablePlayer<CambioPlayer, CambioActionData, CambioPl
     [SerializeField] private Interactable callCambioButton;
     [SerializeField] private Interactable skipAbilityButton;
     [SerializeField] private TextMeshProUGUI calledCambioText;
-    [SerializeField] private TextMeshPro scoreText;
     [SerializeField] private float rowSpacing = 2.5f;
 
     private HashSet<PlayingCard> seenCards = new HashSet<PlayingCard>();
@@ -33,7 +33,6 @@ public class CambioPlayer : TablePlayer<CambioPlayer, CambioActionData, CambioPl
         calledCambioText?.gameObject.SetActive(false);
         callCambioButton?.gameObject.SetActive(false);
         skipAbilityButton?.gameObject.SetActive(false);
-        scoreText?.gameObject.SetActive(false);
     }
 
     #region Turn Logic
@@ -45,9 +44,8 @@ public class CambioPlayer : TablePlayer<CambioPlayer, CambioActionData, CambioPl
         calledCambioText?.gameObject.SetActive(false);
         callCambioButton?.gameObject.SetActive(false);
         skipAbilityButton?.gameObject.SetActive(false);
-        scoreText?.gameObject.SetActive(false);
 
-        seenCards.Clear();
+        if (IsServer) hasPlayedLastTurn.Value = false;
     }
 
     protected override void Game_OnGameEnded()
@@ -57,7 +55,6 @@ public class CambioPlayer : TablePlayer<CambioPlayer, CambioActionData, CambioPl
         calledCambioText?.gameObject.SetActive(false);
         callCambioButton?.gameObject.SetActive(false);
         skipAbilityButton?.gameObject.SetActive(false);
-        scoreText?.gameObject.SetActive(false);
     }
 
     protected override void Game_OnActionExecuted()

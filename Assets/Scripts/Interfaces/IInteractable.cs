@@ -35,7 +35,7 @@ public interface IInteractable
 
 
 
-    public NetworkVariable<InteractDisplay> GetDisplay();
+    public InteractDisplay GetDisplay();
     public void SetDisplay(InteractDisplay display);
     public void ResetDisplay();
 }
