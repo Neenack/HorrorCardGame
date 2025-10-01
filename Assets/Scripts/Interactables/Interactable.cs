@@ -23,7 +23,7 @@ public class Interactable : NetworkBehaviour, IInteractable
     private NetworkVariable<InteractMode> interactMode;
     private NetworkVariable<InteractDisplay> interactableDisplay;
 
-    [SerializeField] private InteractMode defaultInteractMode;
+    [SerializeField] private InteractMode defaultInteractMode = InteractMode.All;
 
     [Header("Interact Display")]
     [SerializeField] private string interactText = "Interact";

@@ -1,11 +1,8 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
-using Unity.Multiplayer.Playmode;
 using Unity.Netcode;
 using UnityEngine;
-using static UnityEditor.Experimental.GraphView.GraphView;
 public enum GameState
 {
     WaitingToStart,
@@ -280,14 +277,18 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
     /// </summary>
     protected void DisableAllCardsAndUnsubscribe()
     {
-        foreach (var player in players) player.DisableAllCardsAndUnsubscribeClientRpc();
+        foreach (var player in players)
+        {
+            player.DisableAllCardsAndUnsubscribeClientRpc();
+            player.ResetHandInteractableDisplay();
+        }
     }
 
     #region Requesting Actions
 
-    /// <summary>
-    /// Executes an action in the card game
-    /// </summary>
+        /// <summary>
+        /// Executes an action in the card game
+        /// </summary>
     public void ExecuteAction(ulong playerID, TAction action)
     {
         if (IsServer)

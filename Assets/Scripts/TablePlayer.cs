@@ -63,6 +63,8 @@ public abstract class TablePlayer<TPlayer, TAction, TAI> : NetworkBehaviour
 
     public override void OnNetworkSpawn()
     {
+        base.OnNetworkSpawn();
+
         ResetHand();
         if (IsServer) AssignTablePlayerID();
     }
@@ -133,8 +135,12 @@ public abstract class TablePlayer<TPlayer, TAction, TAI> : NetworkBehaviour
         }
 
         hand.ClearHand();
-        handCardIds.Clear();
+
+        if (IsServer) handCardIds.Clear();
+        else ClearHandServerRpc();
     }
+
+    [ServerRpc(RequireOwnership = false)] private void ClearHandServerRpc() => handCardIds.Clear();
 
 
     #region Player Starting and Ending Turn Logic
@@ -190,7 +196,6 @@ public abstract class TablePlayer<TPlayer, TAction, TAI> : NetworkBehaviour
         foreach (var card in Hand.Cards)
         {
             card.Interactable.SetInteractable(false);
-            card.Interactable.ResetDisplay();
         }
 
         UnsubscribeAll();
@@ -248,6 +253,14 @@ public abstract class TablePlayer<TPlayer, TAction, TAI> : NetworkBehaviour
             PlayingCard card = PlayingCard.GetPlayingCardFromNetworkID(cardId);
             if (card) hand.AddCard(card);
         }
+    }
+
+    /// <summary>
+    /// Called to reset the interactable display for all cards in the hand
+    /// </summary>
+    public void ResetHandInteractableDisplay()
+    {
+        foreach (var card in Hand.Cards) card.Interactable.ResetDisplay();
     }
 
     #region Player Interaction

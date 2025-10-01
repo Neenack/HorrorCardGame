@@ -2,15 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using TMPro;
-using Unity.Multiplayer.Playmode;
 using Unity.Netcode;
-using Unity.VisualScripting;
-using UnityEditor.ShaderKeywordFilter;
 using UnityEngine;
-using UnityEngine.UIElements;
-using UnityEngine.XR;
 using static Interactable;
-using static UnityEditor.Experimental.GraphView.GraphView;
 
 public class CambioPlayer : TablePlayer<CambioPlayer, CambioActionData, CambioPlayerAI>
 {
@@ -41,11 +35,9 @@ public class CambioPlayer : TablePlayer<CambioPlayer, CambioActionData, CambioPl
     {
         base.Game_OnGameStarted();
 
-        calledCambioText?.gameObject.SetActive(false);
-        callCambioButton?.gameObject.SetActive(false);
-        skipAbilityButton?.gameObject.SetActive(false);
-
-        if (IsServer) hasPlayedLastTurn.Value = false;
+        calledCambioText.gameObject.SetActive(false);
+        callCambioButton.gameObject.SetActive(false);
+        skipAbilityButton.gameObject.SetActive(false);
     }
 
     protected override void Game_OnGameEnded()
