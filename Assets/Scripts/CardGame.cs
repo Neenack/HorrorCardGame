@@ -69,10 +69,12 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
     [Header("AI")]
     [SerializeField] protected float AIThinkingTime = 1f;
 
-
     // Server-only game state
     protected List<PlayingCard> cardPile = new List<PlayingCard>();
     protected PlayingCard drawnCard;
+
+
+    private const float CARD_HEIGHT_Y = 0.0025f;
 
     #region Public Accessors
 
@@ -407,7 +409,7 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
 
         if (placeFaceDown) targetRot *= Quaternion.Euler(180, 0, 0);
 
-        float offsetY = 0.0025f * cardPile.Count;
+        float offsetY = CARD_HEIGHT_Y * cardPile.Count;
         targetPos += Vector3.up * offsetY;
 
         card.MoveTo(targetPos, lerpSpeed);

@@ -36,8 +36,6 @@ public class ConsoleLog : NetworkSingleton<ConsoleLog>
     /// </summary>
     public void Log(string message)
     {
-        if (!IsServer) return;
-
         if (IsServer) message = $"[Server] {message}";
 
         // Add new message

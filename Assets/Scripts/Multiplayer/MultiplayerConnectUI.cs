@@ -7,6 +7,7 @@ public class MultiplayerConnectUI : MonoBehaviour
 {
     [SerializeField] private Button hostButton;
     [SerializeField] private Button clientButton;
+    [SerializeField] private TMP_InputField codeInput;
 
     [SerializeField] private TextMeshProUGUI playerCountText;
 
@@ -25,11 +26,13 @@ public class MultiplayerConnectUI : MonoBehaviour
 
     private void HostButtonOnClick()
     {
-        NetworkManager.Singleton.StartHost();
+        TestRelay.Instance.CreateRelay();
     }
 
     private void ClientButtonOnClick()
     {
-        NetworkManager.Singleton.StartClient();
+        if (codeInput.text.Length != 6) return;
+
+        TestRelay.Instance.JoinRelay(codeInput.text);
     }
 }
