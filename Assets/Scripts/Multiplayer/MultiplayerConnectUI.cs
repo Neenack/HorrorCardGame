@@ -65,6 +65,8 @@ public class MultiplayerConnectUI : MonoBehaviour
 
     private void JoinGameUI()
     {
+        Camera.main.gameObject.SetActive(false);
+
         joinCodeText.gameObject.SetActive(true);
         playerCountText.gameObject.SetActive(true);
         joinCodeText.text = "Join Code: " + TestRelay.Instance.JoinCode;
