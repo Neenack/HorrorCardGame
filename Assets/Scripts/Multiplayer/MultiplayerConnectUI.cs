@@ -31,26 +31,40 @@ public class MultiplayerConnectUI : MonoBehaviour
 
     private async void HostButtonOnClick()
     {
+        DisableBtns();
         bool successful = await TestRelay.Instance.TryCreateRelay();
 
         if (successful) JoinGameUI();
+        else EnableBtns();
     }
 
     private async void ClientButtonOnClick()
     {
         if (codeInput.text.Length != 6) return;
 
+        DisableBtns();
         bool successful = await TestRelay.Instance.TryJoinRelay(codeInput.text);
 
         if (successful) JoinGameUI();
+        else EnableBtns();
     }
 
-    private void JoinGameUI()
+    private void DisableBtns()
     {
         hostButton.gameObject.SetActive(false);
         clientButton.gameObject.SetActive(false);
         codeInput.gameObject.SetActive(false);
+    }
 
+    private void EnableBtns()
+    {
+        hostButton.gameObject.SetActive(true);
+        clientButton.gameObject.SetActive(true);
+        codeInput.gameObject.SetActive(true);
+    }
+
+    private void JoinGameUI()
+    {
         joinCodeText.gameObject.SetActive(true);
         playerCountText.gameObject.SetActive(true);
         joinCodeText.text = "Join Code: " + TestRelay.Instance.JoinCode;

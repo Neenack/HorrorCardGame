@@ -10,8 +10,6 @@ using UnityEngine;
 
 public class TestRelay : MonoSingleton<TestRelay>
 {
-    [SerializeField] private int maxPlayers = 1;
-
     private string joinCode = "";
     public string JoinCode => joinCode.ToUpper();
 
@@ -29,7 +27,7 @@ public class TestRelay : MonoSingleton<TestRelay>
     {
         try
         {
-            Allocation allocation = await RelayService.Instance.CreateAllocationAsync(maxPlayers);
+            Allocation allocation = await RelayService.Instance.CreateAllocationAsync(3);
 
             joinCode = await RelayService.Instance.GetJoinCodeAsync(allocation.AllocationId);
             ConsoleLog.Instance.Log("Join Code: " + joinCode);
