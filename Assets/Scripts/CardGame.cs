@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using Unity.Netcode;
 using UnityEngine;
 public enum GameState
@@ -55,7 +56,8 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
     );
 
     [Header("Seats")]
-    [SerializeField] protected List<TPlayer> players = new List<TPlayer>();
+    [SerializeField] private List<TPlayer> tablePlayers = new List<TPlayer>();
+    private List<TPlayer> activePlayers = new List<TPlayer>();
 
     [Header("Deck Settings")]
     [SerializeField] private CardDeckSO deckSO;
@@ -67,6 +69,7 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
     private IInteractable interactableDeck;
 
     [Header("AI")]
+    [SerializeField] private bool fillBots;
     [SerializeField] protected float AIThinkingTime = 1f;
 
     // Server-only game state
@@ -83,7 +86,7 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
     public NetworkVariable<ulong> PileCardID => topPileCardId;
     public NetworkVariable<ulong> DrawnCardID => drawnCardId;
     public IInteractable InteractableDeck => interactableDeck;
-    public IEnumerable<TPlayer> Players => players;
+    public IEnumerable<TPlayer> Players => activePlayers;
 
 
     #endregion
@@ -100,8 +103,6 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
     private void Awake()
     {
         interactableDeck = GetComponentInChildren<IInteractable>();
-        interactableDeck.SetInteractable(true);
-
         deck = new CardDeck(deckSO);
     }
 
@@ -132,31 +133,27 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
         switch (newValue)
         {
             case GameState.Starting:
-                ClientStartGame();
+                interactableDeck.SetInteractable(false);
+                OnGameStarted?.Invoke();
                 break;
 
             case GameState.Ended:
-                ClientEndGame();
+                OnGameEnded?.Invoke();
                 break;
         }
     }
 
-    private void ResetGame()
+    #region Update
+
+    private void Update()
     {
-        currentTurnIndex = -1;
-        cardPile.Clear();
-        topPileCardId.Value = 0;
+        if (gameState.Value != GameState.WaitingToStart) return;
 
-        currentPlayer = null;
-        currentPlayerTurnId.Value = ulong.MaxValue;
-
-        interactableDeck.ResetDisplay();
-        interactableDeck.SetInteractMode(InteractMode.Host);
-
-        foreach (var player in players) player.ResetHand();
-
-        CardPooler.Instance.ReturnAllActiveCards();
+        fillBots = AIToggleUI.Instance.UseAI;
+        interactableDeck.SetInteractable(fillBots || PlayerManager.Instance.PlayerCount > 1);
     }
+
+    #endregion
 
 
     #region Start Logic
@@ -174,6 +171,11 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
 
         ConsoleLog.Instance.Log("Start Game");
 
+        //Make list of active players, if not using bots do not include them
+        activePlayers = fillBots ? tablePlayers : tablePlayers.Where(p => p.PlayerData != null).ToList();
+
+        foreach (var player in activePlayers) player.SetGame(this);
+
         //Change game to starting
         gameState.Value = GameState.Starting;
 
@@ -181,9 +183,6 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
 
         //Initialise Deck
         CardPooler.Instance.SetDeck(deck);
-
-        //Setup AI players on the server
-        foreach (var player in players) if (player.IsAI) player.SetGame(this);
 
         // Start dealing cards
         StartCoroutine(StartGameCoroutine());
@@ -206,13 +205,6 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
         NextTurn();
     }
 
-    private void ClientStartGame()
-    {
-        interactableDeck.SetInteractable(false);
-
-        OnGameStarted?.Invoke();
-    }
-
 
     #endregion
 
@@ -230,13 +222,23 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
         gameState.Value = GameState.WaitingToStart;
     }
 
-
-    private void ClientEndGame()
+    private void ResetGame()
     {
-        interactableDeck.SetInteractable(true);
+        currentTurnIndex = -1;
+        cardPile.Clear();
+        topPileCardId.Value = 0;
 
-        OnGameEnded?.Invoke();
+        currentPlayer = null;
+        currentPlayerTurnId.Value = ulong.MaxValue;
+
+        interactableDeck.ResetDisplay();
+        interactableDeck.SetInteractMode(InteractMode.Host);
+
+        foreach (var player in activePlayers) player.ResetHand();
+
+        CardPooler.Instance.ReturnAllActiveCards();
     }
+
 
     #endregion
 
@@ -251,13 +253,13 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
         int attempts = 0;
         do
         {
-            currentTurnIndex = (currentTurnIndex + 1) % players.Count;
-            currentPlayer = players[currentTurnIndex];
+            currentTurnIndex = (currentTurnIndex + 1) % activePlayers.Count;
+            currentPlayer = activePlayers[currentTurnIndex];
             attempts++;
         }
-        while (!currentPlayer.IsPlaying() && attempts <= players.Count);
+        while (!currentPlayer.IsPlaying() && attempts <= activePlayers.Count);
 
-        if (attempts > players.Count || HasGameEnded())
+        if (attempts > activePlayers.Count || HasGameEnded())
         {
             StartCoroutine(ShowWinnerRoutine());
             yield break;
@@ -288,7 +290,7 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
     /// </summary>
     protected void DisableAllCardsAndUnsubscribe()
     {
-        foreach (var player in players)
+        foreach (var player in activePlayers)
         {
             player.DisableAllCardsAndUnsubscribeClientRpc();
             player.ResetHandInteractableDisplay();
@@ -401,7 +403,7 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
     {
         if (!IsServer) return;
 
-        foreach (var player in players) player.RequestSetCardInteractable(card.NetworkObjectId, false);
+        foreach (var player in activePlayers) player.RequestSetCardInteractable(card.NetworkObjectId, false);
 
         StartCoroutine(PlaceCardOnPileCoroutine(card, placeFaceDown, lerpSpeed));
     }
@@ -575,7 +577,7 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
     /// </summary>
     public TPlayer GetPlayerFromData(PlayerData data)
     {
-        foreach (var player in players) if (player?.PlayerData == data) return player;
+        foreach (var player in tablePlayers) if (player?.PlayerData == data) return player;
         return null;
     }
 
@@ -593,7 +595,7 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
     /// </summary>
     protected TPlayer GetPlayerFromPlayerID(ulong playerID)
     {
-        foreach (var player in players) if (player?.PlayerId == playerID) return player;
+        foreach (var player in tablePlayers) if (player?.PlayerId == playerID) return player;
         return null;
     }
 
@@ -606,7 +608,7 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
     {
         if (card == null) return null;
 
-        foreach (var player in players)
+        foreach (var player in activePlayers)
         {
             if (player.Hand.Cards.Contains(card))
                 return player;
@@ -621,7 +623,7 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
     /// </summary>
     public TPlayer GetPlayerWithCard(ulong cardNetworkId)
     {
-        foreach (var player in players)
+        foreach (var player in activePlayers)
         {
             if (player.HandCardIDs.Contains(cardNetworkId)) return player;
         }
@@ -637,7 +639,7 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
     /// </summary>
     public Transform TrySetPlayerAtTable(PlayerData playerData)
     {
-        foreach (var player in players)
+        foreach (var player in tablePlayers)
         {
             if (player.IsAI)
             {

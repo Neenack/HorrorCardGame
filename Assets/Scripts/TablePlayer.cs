@@ -110,14 +110,12 @@ public abstract class TablePlayer<TPlayer, TAction, TAI> : NetworkBehaviour
     /// </summary>
     public void SetGame(ICardGame<TPlayer, TAction, TAI> game)
     {
+        if (this.game != null && game != this.game) game.OnGameStarted -= Game_OnServerGameStarted;
+
         this.game = game;
 
-        game.CurrentPlayerTurnID.OnValueChanged += OnTurnChanged;
-        game.OnGameStarted += Game_OnServerGameStarted;
-        game.OnGameEnded += Game_OnServerGameEnded;
-        game.OnAnyActionExecuted += Game_OnServerActionExecuted;
-
-        CreateAI();
+        this.game.OnGameStarted -= Game_OnServerGameStarted;
+        this.game.OnGameStarted += Game_OnServerGameStarted;
     }
 
 
@@ -166,16 +164,26 @@ public abstract class TablePlayer<TPlayer, TAction, TAI> : NetworkBehaviour
 
     protected virtual void Game_OnServerGameStarted()
     {
-        if (IsServer) Game_OnGameStartedClientRpc();
+        game.CurrentPlayerTurnID.OnValueChanged += OnTurnChanged;
+        game.OnGameEnded += Game_OnServerGameEnded;
+        game.OnAnyActionExecuted += Game_OnServerActionExecuted;
+
+        CreateAI();
+
+        Game_OnGameStartedClientRpc();
     }
 
     protected virtual void Game_OnServerGameEnded()
     {
-        if (IsServer) Game_OnGameEndedClientRpc();
+        game.CurrentPlayerTurnID.OnValueChanged -= OnTurnChanged;
+        game.OnGameEnded -= Game_OnServerGameEnded;
+        game.OnAnyActionExecuted -= Game_OnServerActionExecuted;
+
+        Game_OnGameEndedClientRpc();
     }
     protected virtual void Game_OnServerActionExecuted() 
     {
-        if (IsServer) Game_OnActionExecutedClientRpc();
+        Game_OnActionExecutedClientRpc();
     }
 
     [ClientRpc] protected virtual void Game_OnGameStartedClientRpc() { }

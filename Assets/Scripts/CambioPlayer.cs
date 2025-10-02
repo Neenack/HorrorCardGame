@@ -28,30 +28,51 @@ public class CambioPlayer : TablePlayer<CambioPlayer, CambioActionData, CambioPl
 
         calledCambioText?.gameObject.SetActive(false);
         scoreText.gameObject.SetActive(false);
+        HideAllButtons();
     }
 
     #region Turn Logic
+
+    protected override void Game_OnServerGameStarted()
+    {
+        base.Game_OnServerGameStarted();
+
+        HideAllButtons();
+    }
+
+    protected override void Game_OnServerGameEnded()
+    {
+        base.Game_OnServerGameEnded();
+
+        calledCambioText?.gameObject.SetActive(false);
+        scoreText.gameObject.SetActive(false);
+    }
 
     [ClientRpc]
     protected override void Game_OnGameStartedClientRpc()
     {
         calledCambioText.gameObject.SetActive(false);
-        callCambioButton.gameObject.SetActive(false);
-        skipAbilityButton.gameObject.SetActive(false);
         scoreText.gameObject.SetActive(false);
+
+        HideAllButtons();
     }
 
     [ClientRpc]
     protected override void Game_OnGameEndedClientRpc()
     {
         calledCambioText?.gameObject.SetActive(false);
-        callCambioButton?.gameObject.SetActive(false);
-        skipAbilityButton?.gameObject.SetActive(false);
         scoreText.gameObject.SetActive(false);
+
+        HideAllButtons();
     }
 
     [ClientRpc]
     protected override void Game_OnActionExecutedClientRpc()
+    {
+        HideAllButtons();
+    }
+
+    public void HideAllButtons()
     {
         callCambioButton?.gameObject.SetActive(false);
         skipAbilityButton?.gameObject.SetActive(false);

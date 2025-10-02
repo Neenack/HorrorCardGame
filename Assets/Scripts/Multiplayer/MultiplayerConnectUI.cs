@@ -12,6 +12,8 @@ public class MultiplayerConnectUI : MonoBehaviour
     [SerializeField] private TextMeshProUGUI playerCountText;
     [SerializeField] private TextMeshProUGUI joinCodeText;
 
+    [SerializeField] private AIToggleUI aiToggle;
+
     private void Start()
     {
         hostButton.onClick.AddListener(HostButtonOnClick);
@@ -52,5 +54,7 @@ public class MultiplayerConnectUI : MonoBehaviour
         joinCodeText.gameObject.SetActive(true);
         playerCountText.gameObject.SetActive(true);
         joinCodeText.text = "Join Code: " + TestRelay.Instance.JoinCode;
+
+        aiToggle.JoinGame();
     }
 }

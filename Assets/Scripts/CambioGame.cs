@@ -33,7 +33,7 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
 
     protected override void ServerStartGame()
     {
-        foreach (var player in players) player.hasPlayedLastTurn.Value = false;
+        foreach (var player in Players) player.hasPlayedLastTurn.Value = false;
 
         base.ServerStartGame();
     }
@@ -46,6 +46,8 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
     protected override IEnumerator NextTurnRoutine()
     {
         if (!IsServer) yield break;
+
+        foreach (var player in Players) player.Hand.UpdateHand();
 
         selectedCards.Clear();
 
@@ -112,7 +114,7 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
         // Deal 4 cards to each player
         for (int i = 0; i < 4; i++)
         {
-            foreach (var player in players)
+            foreach (var player in Players)
             {
                 StartCoroutine(base.DealCardToPlayer(player));
                 yield return new WaitForSeconds(timeBetweenCardDeals);
@@ -122,7 +124,7 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
         yield return new WaitForSeconds(1f);
 
         // Reveal initial cards (positions 0 and 2)
-        foreach (var player in players)
+        foreach (var player in Players)
         {
             if (player.Hand.Cards.Count >= 3)
             {
@@ -214,7 +216,14 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
     /// <summary>
     /// Checks for game end, ends when no players are left playing
     /// </summary>
-    protected override bool HasGameEnded() => !players.Exists(player => player.IsPlaying());
+    protected override bool HasGameEnded()
+    {
+        foreach (var player in Players)
+        {
+            if (player.IsPlaying()) return false;
+        }
+        return true;
+    }
 
 
 
@@ -226,7 +235,7 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
         // Reveal all cards and calculate scores
         var playerScores = new Dictionary<CambioPlayer, int>();
 
-        foreach (var player in players)
+        foreach (var player in Players)
         {
             int score = 0;
             foreach (var card in player.Hand.Cards)
@@ -399,7 +408,7 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
             case 9:
                 Debug.Log("Look at someone elses card!");
                 currentPlayer.RequestSetHandInteractable(false);
-                foreach (var player in players)
+                foreach (var player in Players)
                 {
                     if (player == currentPlayer) continue;
                     player.RequestSetHandInteractable(true, new CambioActionData(CambioActionType.RevealCard, true, currentPlayer.PlayerId));
@@ -409,7 +418,7 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
             case 10:
                 Debug.Log("Swap entire hands!");
                 currentPlayer.RequestSetHandInteractable(false);
-                foreach (var player in players)
+                foreach (var player in Players)
                 {
                     if (player == currentPlayer) continue;
                     player.RequestSetHandInteractable(true, new CambioActionData(CambioActionType.SwapHand, true, currentPlayer.PlayerId));
@@ -473,7 +482,7 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
             CambioPlayer playerWithCard = GetPlayerWithCard(card);
             if (playerWithCard.PlayerId == currentPlayer.PlayerId)
             {
-                foreach (var player in players)
+                foreach (var player in Players)
                 {
                     if (player == currentPlayer) continue;
                     player.RequestSetHandInteractable(true, new CambioActionData(CambioActionType.SelectCard, false, currentPlayer.PlayerId));
@@ -507,8 +516,8 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
     /// </summary>
     private void BringCardsToPlayerToChoose(CambioPlayer player, PlayingCard card1, PlayingCard card2)
     {
-        BringCardToPlayer(player, card1, new Vector3(-0.2f, cardPullPositionOffset.y, cardPullPositionOffset.z));
-        BringCardToPlayer(player, card2, new Vector3(0.2f, cardPullPositionOffset.y, cardPullPositionOffset.z));
+        BringCardToPlayer(player, card1, new Vector3(0, cardPullPositionOffset.y, cardPullPositionOffset.z) + (player.transform.right * -0.2f));
+        BringCardToPlayer(player, card2, new Vector3(0, cardPullPositionOffset.y, cardPullPositionOffset.z) + (player.transform.right * 0.2f));
     }
 
     #endregion
