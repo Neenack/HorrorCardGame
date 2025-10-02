@@ -13,16 +13,6 @@ public class TestRelay : MonoSingleton<TestRelay>
     private string joinCode = "";
     public string JoinCode => joinCode.ToUpper();
 
-    private async void Start()
-    {
-        await UnityServices.InitializeAsync();
-        AuthenticationService.Instance.SignedIn += () =>
-        {
-            Debug.Log("Signed in " + AuthenticationService.Instance.PlayerId);
-        };
-        await AuthenticationService.Instance.SignInAnonymouslyAsync();
-    }
-
     public async Task<bool> TryCreateRelay()
     {
         try
