@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 07ee3d98a9ffacd418aa80e1ce048e1a, type: 3}
   m_Name: Diamond_10
   m_EditorClassIdentifier: Assembly-CSharp::PlayingCardSO
-  cardPrefab: {fileID: 2603454528688422550, guid: c933ed035e186674f866fe42bc188ed9, type: 3}
-  cardSprite: {fileID: 5162319668047967537, guid: 2ee177719f492439ebcf591e83df2d59, type: 3}
+  cardPrefab: {fileID: 555840946121513253, guid: f1df19f818753f74e8a0b03f24442f8f, type: 3}
+  cardTexture: {fileID: 2800000, guid: 64c21bee6a99356438035daffa990356, type: 3}
   suit: 1
   value: 10

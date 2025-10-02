@@ -13,12 +13,8 @@ public class PlayingCard : NetworkBehaviour
     );
 
     public event Action<PlayingCard> OnShowCard;
-
-    private SpriteRenderer frontFace;
-    private SpriteRenderer backFace;
-    private Transform card;
-
     private PlayingCardSO cardSO;
+    private MeshRenderer meshRenderer;
 
     private Vector3 targetPos;
 
@@ -49,11 +45,7 @@ public class PlayingCard : NetworkBehaviour
 
     private void Awake()
     {
-        card = transform.GetChild(0);
-
-        frontFace = card.Find("Front").GetComponent<SpriteRenderer>();
-        backFace = card.Find("Back").GetComponent<SpriteRenderer>();
-
+        meshRenderer = GetComponent<MeshRenderer>();
         interactable = GetComponent<IInteractable>();
     }
 
@@ -108,24 +100,9 @@ public class PlayingCard : NetworkBehaviour
         UpdateCardVisuals();
     }
 
-    public void HideFrontFace()
-    {
-        if (IsServer)
-        {
-            frontFace.sprite = backFace.sprite;
-            HideFrontFaceClientRpc();
-        }
-    }
-
-    [ClientRpc]
-    private void HideFrontFaceClientRpc()
-    {
-        frontFace.sprite = backFace.sprite;
-    }
-
     public void UpdateCardVisuals()
     {
-        frontFace.sprite = cardSO.GetSprite();
+        meshRenderer.material.mainTexture = cardSO.GetTexture();
     }
 
     public void FlipCard(bool waitForMovement = true, float flipSpeed = 3f)
@@ -148,7 +125,7 @@ public class PlayingCard : NetworkBehaviour
         if (afterMovement) yield return new WaitUntil(() => !moving);
 
         // Determine start and end angles
-        float startAngle = card.localEulerAngles.x;
+        float startAngle = transform.localEulerAngles.x;
 
         // Convert >180 to negative for smooth lerp
         if (startAngle > 180f) startAngle -= 360f;
@@ -161,12 +138,12 @@ public class PlayingCard : NetworkBehaviour
         {
             t += Time.deltaTime * speed;
             float x = Mathf.Lerp(startAngle, endAngle, t);
-            card.localEulerAngles = new Vector3(x, card.localEulerAngles.y, card.localEulerAngles.z);
+            transform.localEulerAngles = new Vector3(x, transform.localEulerAngles.y, transform.localEulerAngles.z);
             yield return null;
         }
 
         // Ensure exact final angle
-        card.localEulerAngles = new Vector3(endAngle % 360f, card.localEulerAngles.y, card.localEulerAngles.z);
+        transform.localEulerAngles = new Vector3(endAngle % 360f, transform.localEulerAngles.y, transform.localEulerAngles.z);
 
         isFaceDown = !isFaceDown;
         OnShowCard?.Invoke(this);

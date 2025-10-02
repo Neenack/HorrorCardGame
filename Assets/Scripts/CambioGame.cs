@@ -148,7 +148,7 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
         Quaternion originalRot = card.transform.rotation;
 
         card.MoveTo(basePos + new Vector3(0, cardRevealHeight, 0), 5f);
-        Quaternion targetUpwardsRot = Quaternion.LookRotation(player.transform.forward, Vector3.up) * Quaternion.Euler(90f, 0f, 0);
+        Quaternion targetUpwardsRot = Quaternion.LookRotation(player.transform.forward, Vector3.up) * Quaternion.Euler(-90f, 0f, 0);
         card.RotateTo(targetUpwardsRot, 5f);
 
         yield return new WaitForSeconds(cardViewingTime);

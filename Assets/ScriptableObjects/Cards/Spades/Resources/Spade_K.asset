@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 07ee3d98a9ffacd418aa80e1ce048e1a, type: 3}
   m_Name: Spade_K
   m_EditorClassIdentifier: Assembly-CSharp::PlayingCardSO
-  cardPrefab: {fileID: 2603454528688422550, guid: c933ed035e186674f866fe42bc188ed9, type: 3}
-  cardSprite: {fileID: 2620435828420200675, guid: 2ee177719f492439ebcf591e83df2d59, type: 3}
+  cardPrefab: {fileID: 4887873462475242365, guid: 050d0247bb4d55a4d8b9bcaad9565c44, type: 3}
+  cardTexture: {fileID: 2800000, guid: 00a3e844e748f5c4e8214527fa478fa3, type: 3}
   suit: 2
   value: 13

@@ -405,7 +405,7 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
         Vector3 targetPos = cardPileTransform.position;
         Quaternion targetRot = cardPileTransform.rotation;
 
-        if (!placeFaceDown) targetRot *= Quaternion.Euler(180, 0, 0);
+        if (placeFaceDown) targetRot *= Quaternion.Euler(180, 0, 0);
 
         float offsetY = 0.0025f * cardPile.Count;
         targetPos += Vector3.up * offsetY;
@@ -520,7 +520,7 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
         card.MoveTo(targetPos, 5f);
 
         // Rotate card to face upwards relative to player
-        Quaternion targetUpwardsRot = Quaternion.LookRotation(player.transform.forward, Vector3.up) * Quaternion.Euler(90f, 0f, 0);
+        Quaternion targetUpwardsRot = Quaternion.LookRotation(player.transform.forward, Vector3.up) * Quaternion.Euler(-90f, 0f, 0);
         card.RotateTo(targetUpwardsRot, 5f);
     }
 

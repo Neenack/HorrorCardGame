@@ -14,13 +14,13 @@ public class PlayingCardSO : ScriptableObject
 {
     [Header("Card Prefab")]
     [SerializeField] private Transform cardPrefab;
-    [SerializeField] private Sprite cardSprite;
+    [SerializeField] private Texture2D cardTexture;
 
     [Header("Card Value")]
     [SerializeField] private Suit suit;
     [SerializeField] private int value;
 
-    public Sprite GetSprite() => cardSprite;
+    public Texture2D GetTexture() => cardTexture;
     public Suit Suit => suit;
     public int Value => value;
 
@@ -37,20 +37,17 @@ public class PlayingCardSO : ScriptableObject
         return rankName + ($" of {suit}");
     }
 
-    public PlayingCard SpawnCard(Transform pos)
+    public PlayingCard SpawnCard(Transform pos, bool isFaceDown = true)
     {
-        Quaternion rotation = Quaternion.LookRotation(pos.forward, Vector3.up);
+        Quaternion rotation = Quaternion.LookRotation(pos.forward, Vector3.up) * Quaternion.Euler(isFaceDown ? 180 : 0, 0, 0);
         Transform newCard = Instantiate(this.cardPrefab, pos.position, rotation);
 
         newCard.GetComponent<NetworkObject>().Spawn(true);
-
         newCard.SetParent(pos);
 
-        if (newCard.TryGetComponent(out PlayingCard playingCard))
-        {
-            playingCard.SetCard(this);
-            return playingCard;
-        }
-        return null;
+        if (!newCard.TryGetComponent(out PlayingCard playingCard)) playingCard = newCard.AddComponent<PlayingCard>();
+        playingCard.SetCard(this);
+
+        return playingCard;
     }
 }

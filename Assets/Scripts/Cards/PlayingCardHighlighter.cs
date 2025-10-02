@@ -2,7 +2,6 @@ using UnityEngine;
 
 public class PlayingCardHighlighter : MonoBehaviour, IHighlighter
 {
-    private Transform card;
     private Vector3 originalScale;
     private Vector3 targetScale;
 
@@ -11,15 +10,14 @@ public class PlayingCardHighlighter : MonoBehaviour, IHighlighter
 
     private void Start()
     {
-        card = transform.GetChild(0);
-        originalScale = card.localScale;
+        originalScale = transform.localScale;
         targetScale = originalScale;
     }
 
     private void Update()
     {
         // Smoothly interpolate towards target scale
-        card.localScale = Vector3.Lerp(card.localScale, targetScale, Time.deltaTime * lerpSpeed);
+        transform.localScale = Vector3.Lerp(transform.localScale, targetScale, Time.deltaTime * lerpSpeed);
     }
     public void Highlight(bool enable)
     {

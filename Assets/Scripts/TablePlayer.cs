@@ -36,7 +36,6 @@ public abstract class TablePlayer<TPlayer, TAction, TAI> : NetworkBehaviour
     [SerializeField] protected Vector3 cardSpacing = new Vector3(0.3f, 0, 0);
     [SerializeField] protected float yOffset = 0;
     [SerializeField] private float fanAngle = 0f;
-    [SerializeField] private float dealingXRotation = 110f;
 
 
     #region Public Accessors
@@ -509,7 +508,7 @@ public abstract class TablePlayer<TPlayer, TAction, TAI> : NetworkBehaviour
         // Rotate around local up axis, centered on middle card
         float angle = (cardIndex - (totalCards - 1) / 2f) * angleStep;
 
-        return transform.rotation * Quaternion.Euler(dealingXRotation, angle, 0f);
+        return transform.rotation * Quaternion.Euler(180f, angle, 0f);
     }
 
     #endregion
