@@ -39,8 +39,7 @@ public class PlayingCardSO : ScriptableObject
 
     public PlayingCard SpawnCard(Transform pos, bool isFaceDown = true)
     {
-        Quaternion rotation = Quaternion.LookRotation(pos.forward, Vector3.up) * Quaternion.Euler(isFaceDown ? 180 : 0, 0, 0);
-        Transform newCard = Instantiate(this.cardPrefab, pos.position, rotation);
+        Transform newCard = Instantiate(this.cardPrefab, pos.position, Quaternion.identity);
 
         newCard.GetComponent<NetworkObject>().Spawn(true);
         newCard.SetParent(pos);

@@ -100,6 +100,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b0bd65a78af5766458f23cfe8b89a3c4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerInteractUI
+  ShowTopMostFoldoutHeaderGroup: 1
   interactor: {fileID: 5723288935586635872}
   interactText: {fileID: 4634349554249417208}
   interactBox: {fileID: 7706244462996174077}

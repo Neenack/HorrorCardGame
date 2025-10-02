@@ -109,8 +109,6 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
     {
         if (!IsServer) yield break;
 
-        yield return StartCoroutine(CardPooler.Instance.InitializePool());
-
         // Deal 4 cards to each player
         for (int i = 0; i < 4; i++)
         {
@@ -239,7 +237,7 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
 
             playerScores[player] = score;
             ConsoleLog.Instance.Log($"{player.GetName()} has a score of {score}");
-            //SetScoreClientRpc(player.OwnerClientId, score);
+            ShowScoreClientRpc(player.PlayerId, score);
 
             yield return new WaitForSeconds(timeBetweenPlayerReveals);
         }
@@ -259,11 +257,16 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
         if (winner != null)
         {
             ConsoleLog.Instance.Log($"{winner.GetName()} wins with score {lowestScore}!");
-            //AnnounceWinnerClientRpc(winner.NetworkObjectId, lowestScore);
         }
 
         yield return new WaitForSeconds(3f);
         ServerEndGame();
+    }
+
+    [ClientRpc]
+    private void ShowScoreClientRpc(ulong playerId, int score)
+    {
+        GetPlayerFromPlayerID(playerId)?.ShowScore(score);
     }
 
     #endregion

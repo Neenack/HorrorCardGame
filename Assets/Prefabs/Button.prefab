@@ -168,4 +168,8 @@ MonoBehaviour:
   ShowTopMostFoldoutHeaderGroup: 1
   canInteract: 1
   defaultInteractMode: 0
-  defaultText: Interact
+  disableOnSpawn: 0
+  interactText: Interact
+  showInteractBox: 0
+  interactBoxTitle: 
+  interactBoxBody: 

@@ -67,10 +67,7 @@ public class PlayerManager : NetworkSingleton<PlayerManager>
     /// </summary>
     public PlayerData GetPlayerDataById(ulong clientId)
     {
-        if (players.TryGetValue(clientId, out PlayerData player))
-        {
-            return player;
-        }
-        return null;
+        players.TryGetValue(clientId, out PlayerData player);
+        return player;
     }
 }

@@ -1,9 +1,11 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using TMPro;
 using Unity.Netcode;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using static Interactable;
 
 public class CambioPlayer : TablePlayer<CambioPlayer, CambioActionData, CambioPlayerAI>
@@ -14,45 +16,43 @@ public class CambioPlayer : TablePlayer<CambioPlayer, CambioActionData, CambioPl
     [SerializeField] private Interactable callCambioButton;
     [SerializeField] private Interactable skipAbilityButton;
     [SerializeField] private TextMeshProUGUI calledCambioText;
+    [SerializeField] private TextMeshProUGUI scoreText;
     [SerializeField] private float rowSpacing = 2.5f;
 
     private HashSet<PlayingCard> seenCards = new HashSet<PlayingCard>();
     public HashSet<PlayingCard> SeenCards => seenCards;
-
 
     public override void OnNetworkSpawn()
     {
         base.OnNetworkSpawn();
 
         calledCambioText?.gameObject.SetActive(false);
-        callCambioButton?.gameObject.SetActive(false);
-        skipAbilityButton?.gameObject.SetActive(false);
+        scoreText.gameObject.SetActive(false);
     }
 
     #region Turn Logic
 
-    protected override void Game_OnGameStarted()
+    [ClientRpc]
+    protected override void Game_OnGameStartedClientRpc()
     {
-        base.Game_OnGameStarted();
-
         calledCambioText.gameObject.SetActive(false);
         callCambioButton.gameObject.SetActive(false);
         skipAbilityButton.gameObject.SetActive(false);
+        scoreText.gameObject.SetActive(false);
     }
 
-    protected override void Game_OnGameEnded()
+    [ClientRpc]
+    protected override void Game_OnGameEndedClientRpc()
     {
-        base.Game_OnGameEnded();
-
         calledCambioText?.gameObject.SetActive(false);
         callCambioButton?.gameObject.SetActive(false);
         skipAbilityButton?.gameObject.SetActive(false);
+        scoreText.gameObject.SetActive(false);
     }
 
-    protected override void Game_OnActionExecuted()
+    [ClientRpc]
+    protected override void Game_OnActionExecutedClientRpc()
     {
-        base.Game_OnActionExecuted();
-
         callCambioButton?.gameObject.SetActive(false);
         skipAbilityButton?.gameObject.SetActive(false);
     }
@@ -81,15 +81,21 @@ public class CambioPlayer : TablePlayer<CambioPlayer, CambioActionData, CambioPl
     /// </summary>
     public override bool IsPlaying() => !hasPlayedLastTurn.Value;
 
+    public void ShowScore(int score)
+    {
+        scoreText.text = score.ToString();
+        scoreText.gameObject.SetActive(true);
+    }
+
     #endregion
 
-    #region Interaction
+        #region Interaction
 
-    #region Interact Event Switch
+        #region Interact Event Switch
 
-    /// <summary>
-    /// When given action data, will subscribe players hand to different actions locally
-    /// </summary>
+        /// <summary>
+        /// When given action data, will subscribe players hand to different actions locally
+        /// </summary>
     protected override EventHandler<InteractEventArgs> GetCardOnInteractEvent(CambioActionData data)
     {
         switch (data.Type)

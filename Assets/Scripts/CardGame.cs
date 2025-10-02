@@ -101,6 +101,8 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
     {
         interactableDeck = GetComponentInChildren<IInteractable>();
         interactableDeck.SetInteractable(true);
+
+        deck = new CardDeck(deckSO);
     }
 
     public override void OnNetworkSpawn()
@@ -139,6 +141,23 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
         }
     }
 
+    private void ResetGame()
+    {
+        currentTurnIndex = -1;
+        cardPile.Clear();
+        topPileCardId.Value = 0;
+
+        currentPlayer = null;
+        currentPlayerTurnId.Value = ulong.MaxValue;
+
+        interactableDeck.ResetDisplay();
+        interactableDeck.SetInteractMode(InteractMode.Host);
+
+        foreach (var player in players) player.ResetHand();
+
+        CardPooler.Instance.ReturnAllActiveCards();
+    }
+
 
     #region Start Logic
 
@@ -158,11 +177,9 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
         //Change game to starting
         gameState.Value = GameState.Starting;
 
-        //Set current turn to default
-        currentTurnIndex = -1;
+        ResetGame();
 
         //Initialise Deck
-        deck = new CardDeck(deckSO);
         CardPooler.Instance.SetDeck(deck);
 
         //Setup AI players on the server
@@ -174,6 +191,10 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
 
     private IEnumerator StartGameCoroutine()
     {
+        if (!IsServer) yield break;
+
+        yield return StartCoroutine(CardPooler.Instance.InitializePool());
+
         yield return StartCoroutine(DealInitialCards());
 
         gameState.Value = GameState.Playing;
@@ -204,17 +225,7 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
 
         gameState.Value = GameState.Ended;
 
-        CardPooler.Instance.ReturnAllActiveCards();
-
-        foreach (var player in players) player.ResetHand();
-
-        cardPile.Clear();
-        topPileCardId.Value = 0;
-
-        currentPlayer = null;
-
-        interactableDeck.ResetDisplay();
-        interactableDeck.SetInteractMode(InteractMode.Host);
+        ResetGame();
 
         gameState.Value = GameState.WaitingToStart;
     }
@@ -236,8 +247,6 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
     protected virtual IEnumerator NextTurnRoutine()
     {
         if (!IsServer) yield break;
-
-        foreach (var player in players) player.Hand.UpdateHand();
 
         int attempts = 0;
         do

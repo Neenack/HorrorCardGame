@@ -15,7 +15,7 @@ public class PlayerNameTag : MonoBehaviour
 
     private void PlayerData_OnPlayerSpawned(PlayerData obj)
     {
-        SetNameTag("Player " + playerData.GetName());
+        SetNameTag(playerData.GetName());
     }
 
 

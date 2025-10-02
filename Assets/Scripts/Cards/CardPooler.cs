@@ -15,7 +15,7 @@ public class CardPooler : NetworkSingleton<CardPooler>
     private Queue<PlayingCard> availableCards = new Queue<PlayingCard>();
     private HashSet<PlayingCard> activeCards = new HashSet<PlayingCard>();
     private bool isRefilling = false;
-    private CardDeck deck;
+    private CardDeck deck = null;
 
     public int AvailableCount => availableCards.Count;
     public int ActiveCount => activeCards.Count;
@@ -35,8 +35,15 @@ public class CardPooler : NetworkSingleton<CardPooler>
             return;
         }
 
+        if (deck == newDeck) // Same deck, just shuffle the available cards
+        {
+            ShuffleAvailableCards();
+            ConsoleLog.Instance.Log("CardPooler: Same deck, shuffled existing pool.");
+            return;
+        }
+
+        // New deck, assign and rebuild
         deck = newDeck;
-        //Debug.Log($"CardPooler: Deck set to {deck}");
     }
 
     /// <summary>
@@ -54,6 +61,12 @@ public class CardPooler : NetworkSingleton<CardPooler>
     public IEnumerator InitializePool()
     {
         if (!IsServer || availableCards.Count > 0) yield break;
+
+        if (availableCards.Count > 0)
+        {
+            ConsoleLog.Instance.Log("Card Pool already initialized");
+            yield break;
+        }
 
         ConsoleLog.Instance.Log("Initialising Card Pool");
 
@@ -95,6 +108,7 @@ public class CardPooler : NetworkSingleton<CardPooler>
     {
         // Hide the card
         card.transform.position = poolPosition;
+        card.transform.rotation = Quaternion.Euler(180f, 0f, 0f);
 
         card.gameObject.SetActive(false);
 
@@ -271,18 +285,78 @@ public class CardPooler : NetworkSingleton<CardPooler>
 
         StopAllCoroutines();
 
-        // Return all active cards
-        List<PlayingCard> cardsToReturn = new List<PlayingCard>(activeCards);
-        foreach (PlayingCard card in cardsToReturn)
-        {
-            ReturnCard(card);
-        }
+        //Reset entire pool
+        ResetPool();
 
         // Reset deck
         deck.ResetDeck();
 
         // Rebuild pool
         StartCoroutine(InitializePool());
+    }
+
+
+    /// <summary>
+    /// Destroys all cards in the pool and clears the collections.
+    /// </summary>
+    public void ResetPool()
+    {
+        if (!IsServer)
+        {
+            Debug.LogError("ResetPool can only be called on the server!");
+            return;
+        }
+
+        StopAllCoroutines();
+
+        // Destroy all active cards
+        foreach (var card in activeCards)
+        {
+            if (card != null && card.NetworkObject != null && card.NetworkObject.IsSpawned)
+            {
+                card.NetworkObject.Despawn();
+                Destroy(card.gameObject);
+            }
+        }
+        activeCards.Clear();
+
+        // Destroy all available cards
+        foreach (var card in availableCards)
+        {
+            if (card != null && card.NetworkObject != null && card.NetworkObject.IsSpawned)
+            {
+                card.NetworkObject.Despawn();
+                Destroy(card.gameObject);
+            }
+        }
+        availableCards.Clear();
+
+        ConsoleLog.Instance.Log("CardPooler: Pool has been fully reset.");
+    }
+
+    /// <summary>
+    /// Shuffles the available cards in the pool
+    /// </summary>
+    private void ShuffleAvailableCards()
+    {
+        if (availableCards.Count <= 1) return;
+
+        var list = new List<PlayingCard>(availableCards);
+        availableCards.Clear();
+
+        // Fisher-Yates shuffle
+        for (int i = list.Count - 1; i > 0; i--)
+        {
+            int j = Random.Range(0, i + 1);
+            var temp = list[i];
+            list[i] = list[j];
+            list[j] = temp;
+        }
+
+        foreach (var card in list)
+        {
+            availableCards.Enqueue(card);
+        }
     }
 
     #region Debug Info

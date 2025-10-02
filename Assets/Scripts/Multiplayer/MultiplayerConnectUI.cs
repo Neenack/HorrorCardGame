@@ -10,11 +10,14 @@ public class MultiplayerConnectUI : MonoBehaviour
     [SerializeField] private TMP_InputField codeInput;
 
     [SerializeField] private TextMeshProUGUI playerCountText;
+    [SerializeField] private TextMeshProUGUI joinCodeText;
 
     private void Start()
     {
         hostButton.onClick.AddListener(HostButtonOnClick);
         clientButton.onClick.AddListener(ClientButtonOnClick);
+        joinCodeText.gameObject.SetActive(false);
+        playerCountText.gameObject.SetActive(false);
 
         PlayerManager.OnPlayerCountUpdated += PlayerManager_OnPlayerCountUpdated;
     }
@@ -24,15 +27,30 @@ public class MultiplayerConnectUI : MonoBehaviour
         playerCountText.text = "Players: " + PlayerManager.Instance.PlayerCount;
     }
 
-    private void HostButtonOnClick()
+    private async void HostButtonOnClick()
     {
-        TestRelay.Instance.CreateRelay();
+        bool successful = await TestRelay.Instance.TryCreateRelay();
+
+        if (successful) JoinGameUI();
     }
 
-    private void ClientButtonOnClick()
+    private async void ClientButtonOnClick()
     {
         if (codeInput.text.Length != 6) return;
 
-        TestRelay.Instance.JoinRelay(codeInput.text);
+        bool successful = await TestRelay.Instance.TryJoinRelay(codeInput.text);
+
+        if (successful) JoinGameUI();
+    }
+
+    private void JoinGameUI()
+    {
+        hostButton.gameObject.SetActive(false);
+        clientButton.gameObject.SetActive(false);
+        codeInput.gameObject.SetActive(false);
+
+        joinCodeText.gameObject.SetActive(true);
+        playerCountText.gameObject.SetActive(true);
+        joinCodeText.text = "Join Code: " + TestRelay.Instance.JoinCode;
     }
 }

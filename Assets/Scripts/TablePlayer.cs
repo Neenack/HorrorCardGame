@@ -79,9 +79,9 @@ public abstract class TablePlayer<TPlayer, TAction, TAI> : NetworkBehaviour
         if (game != null)
         {
             game.CurrentPlayerTurnID.OnValueChanged -= OnTurnChanged;
-            game.OnGameStarted -= Game_OnGameStarted;
-            game.OnGameEnded -= Game_OnGameEnded;
-            game.OnAnyActionExecuted -= Game_OnActionExecuted;
+            game.OnGameStarted -= Game_OnServerGameStarted;
+            game.OnGameEnded -= Game_OnServerGameEnded;
+            game.OnAnyActionExecuted -= Game_OnServerActionExecuted;
         }
 
         UnsubscribeAll();
@@ -113,9 +113,9 @@ public abstract class TablePlayer<TPlayer, TAction, TAI> : NetworkBehaviour
         this.game = game;
 
         game.CurrentPlayerTurnID.OnValueChanged += OnTurnChanged;
-        game.OnGameStarted += Game_OnGameStarted;
-        game.OnGameEnded += Game_OnGameEnded;
-        game.OnAnyActionExecuted += Game_OnActionExecuted;
+        game.OnGameStarted += Game_OnServerGameStarted;
+        game.OnGameEnded += Game_OnServerGameEnded;
+        game.OnAnyActionExecuted += Game_OnServerActionExecuted;
 
         CreateAI();
     }
@@ -164,9 +164,23 @@ public abstract class TablePlayer<TPlayer, TAction, TAI> : NetworkBehaviour
         }
     }
 
-    protected virtual void Game_OnGameEnded() { }
-    protected virtual void Game_OnGameStarted() { }
-    protected virtual void Game_OnActionExecuted() { }
+    protected virtual void Game_OnServerGameStarted()
+    {
+        if (IsServer) Game_OnGameStartedClientRpc();
+    }
+
+    protected virtual void Game_OnServerGameEnded()
+    {
+        if (IsServer) Game_OnGameEndedClientRpc();
+    }
+    protected virtual void Game_OnServerActionExecuted() 
+    {
+        if (IsServer) Game_OnActionExecutedClientRpc();
+    }
+
+    [ClientRpc] protected virtual void Game_OnGameStartedClientRpc() { }
+    [ClientRpc] protected virtual void Game_OnGameEndedClientRpc() { }
+    [ClientRpc] protected virtual void Game_OnActionExecutedClientRpc() { }
 
     /// <summary>
     /// Called when the players turn starts, and only called on the players local client

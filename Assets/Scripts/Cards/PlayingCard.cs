@@ -105,7 +105,7 @@ public class PlayingCard : NetworkBehaviour
         meshRenderer.material.mainTexture = cardSO.GetTexture();
     }
 
-    public void FlipCard(bool waitForMovement = true, float flipSpeed = 3f)
+    public void FlipCard(float flipSpeed = 10f)
     {
         if (!IsServer)
         {
@@ -113,39 +113,11 @@ public class PlayingCard : NetworkBehaviour
             return;
         }
 
-        // Server flips its own
-        StartCoroutine(FlipRoutine(flipSpeed, waitForMovement));
+        Quaternion currentRot = transform.rotation;
+        Quaternion targetRotation = currentRot * Quaternion.Euler(180f, 0f, 0f);
 
-        // Tell everyone else to flip
-        FlipCardClientRpc(waitForMovement, flipSpeed);
-    }
+        RotateTo(targetRotation, flipSpeed);
 
-    private IEnumerator FlipRoutine(float speed, bool afterMovement)
-    {
-        if (afterMovement) yield return new WaitUntil(() => !moving);
-
-        // Determine start and end angles
-        float startAngle = transform.localEulerAngles.x;
-
-        // Convert >180 to negative for smooth lerp
-        if (startAngle > 180f) startAngle -= 360f;
-
-        float endAngle = startAngle + 180f; // just flip
-
-        float t = 0f;
-
-        while (t < 1f)
-        {
-            t += Time.deltaTime * speed;
-            float x = Mathf.Lerp(startAngle, endAngle, t);
-            transform.localEulerAngles = new Vector3(x, transform.localEulerAngles.y, transform.localEulerAngles.z);
-            yield return null;
-        }
-
-        // Ensure exact final angle
-        transform.localEulerAngles = new Vector3(endAngle % 360f, transform.localEulerAngles.y, transform.localEulerAngles.z);
-
-        isFaceDown = !isFaceDown;
         OnShowCard?.Invoke(this);
     }
 
@@ -226,14 +198,6 @@ public class PlayingCard : NetworkBehaviour
         targetRot = targetRotation;
         rotSpeed = lerpSpeed;
         rotating = true;
-    }
-
-    [ClientRpc]
-    private void FlipCardClientRpc(bool waitForMovement, float flipSpeed)
-    {
-        if (IsServer) return;
-
-        StartCoroutine(FlipRoutine(flipSpeed, waitForMovement));
     }
 
     #endregion
