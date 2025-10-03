@@ -13,7 +13,7 @@ public class PlayerNameTag : MonoBehaviour
         playerData = GetComponentInParent<PlayerData>();
         if (playerData != null)
         {
-            Invoke("SetNameTag", 1f);
+            Invoke("SetNameTag", 0.2f);
 
             playerData.OnPlayerSpawned += PlayerData_OnPlayerSpawned;
         }
