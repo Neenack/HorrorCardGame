@@ -14,6 +14,7 @@ public class LobbyUI : MonoSingleton<LobbyUI>
     [SerializeField] private TextMeshProUGUI lobbyNameText;
     [SerializeField] private TextMeshProUGUI playerCountText;
     [SerializeField] private TextMeshProUGUI gameModeText;
+    [SerializeField] private TextMeshProUGUI lobbyCodeText;
     [SerializeField] private Button leaveLobbyButton;
     [SerializeField] private Button changeGameModeButton;
     [SerializeField] private Button startGameButton;
@@ -103,6 +104,7 @@ public class LobbyUI : MonoSingleton<LobbyUI>
         lobbyNameText.text = lobby.Name;
         playerCountText.text = lobby.Players.Count + "/" + lobby.MaxPlayers;
         gameModeText.text = lobby.Data[LobbyManager.KEY_GAME_MODE].Value;
+        lobbyCodeText.text = "Lobby Code: " + lobby.LobbyCode;
 
         Show();
     }
