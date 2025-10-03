@@ -2,14 +2,21 @@ using System;
 using Unity.Collections;
 using Unity.Netcode;
 using Unity.Services.Authentication;
+using Unity.Services.Lobbies.Models;
 using UnityEngine;
 
 public class PlayerData : NetworkBehaviour
 {
-    private NetworkVariable<NetworkString> playerName = new NetworkVariable<NetworkString>();
+    public event Action OnPlayerSpawned;
+
+    private Player lobbyPlayer;
+
+
+    private NetworkVariable<FixedString32Bytes> playerName = new NetworkVariable<FixedString32Bytes>();
+    public NetworkVariable<FixedString32Bytes> PlayerName => playerName;
+
     private FirstPersonController controller;
 
-    public event Action<PlayerData> OnPlayerSpawned;
 
     private void Awake()
     {
@@ -31,37 +38,40 @@ public class PlayerData : NetworkBehaviour
             controller?.EnableMovement();
         }
 
-        // Only the owning client tells the server its PlayerId
+        string authId = AuthenticationService.Instance.PlayerId;
+
         if (IsOwner)
         {
-            string authId = AuthenticationService.Instance.PlayerId;
             if (IsServer)
             {
                 // Host can set its own name directly
-                ApplyPlayerName(authId);
+                SetPlayer(authId);
             }
             else
             {
                 // Remote client asks the server to set it
-                SetPlayerIdServerRpc(authId);
+                SetPlayerServerRpc(authId);
             }
         }
 
         PlayerManager.Instance.RegisterPlayer(this);
-        OnPlayerSpawned?.Invoke(this);
+        OnPlayerSpawned?.Invoke();
     }
 
-    private void ApplyPlayerName(string playerId)
+    private void SetPlayer(string playerId)
     {
-        string lobbyName = LobbyManager.Instance.GetPlayerNameById(playerId);
-        playerName.Value = string.IsNullOrEmpty(lobbyName) ? "Player " + OwnerClientId : lobbyName;
+        lobbyPlayer = LobbyManager.Instance.GetPlayerById(playerId);
+        if (lobbyPlayer == null) return;
+
+        SetName(lobbyPlayer.Data[LobbyManager.KEY_PLAYER_NAME].Value);
     }
 
-    [ServerRpc]
-    private void SetPlayerIdServerRpc(string playerId)
+    [ServerRpc] private void SetPlayerServerRpc(string playerId) => SetPlayer(playerId);
+
+    public void SetName(string newName)
     {
-        ApplyPlayerName(playerId);
+        if (IsServer) playerName.Value = newName;
     }
 
-    public string GetName() => playerName.Value;
+    public string GetName() => playerName.Value.ToString();
 }

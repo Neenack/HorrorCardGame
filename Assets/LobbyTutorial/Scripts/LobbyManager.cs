@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Unity.Services.Authentication;
 using Unity.Services.Core;
 using Unity.Services.Lobbies;
@@ -69,7 +70,7 @@ public class LobbyManager : MonoBehaviour {
         HandleLobbyPolling();
     }
 
-    public async void Authenticate(string playerName) {
+    public async Task<bool> Authenticate(string playerName) {
         this.playerName = playerName;
         InitializationOptions initializationOptions = new InitializationOptions();
         initializationOptions.SetProfile(playerName);
@@ -84,6 +85,8 @@ public class LobbyManager : MonoBehaviour {
         };
 
         await AuthenticationService.Instance.SignInAnonymouslyAsync();
+
+        return true;
     }
 
     private void HandleRefreshLobbyList() {
@@ -110,37 +113,40 @@ public class LobbyManager : MonoBehaviour {
         }
     }
 
-    private async void HandleLobbyPolling() {
-        if (joinedLobby != null) {
+    private async void HandleLobbyPolling()
+    {
+        if (joinedLobby != null)
+        {
             lobbyPollTimer -= Time.deltaTime;
-            if (lobbyPollTimer < 0f) {
-                float lobbyPollTimerMax = 1.1f;
-                lobbyPollTimer = lobbyPollTimerMax;
+            if (lobbyPollTimer <= 0f)
+            {
+                lobbyPollTimer = 3f;
 
-                joinedLobby = await LobbyService.Instance.GetLobbyAsync(joinedLobby.Id);
-
-                OnJoinedLobbyUpdate?.Invoke(this, new LobbyEventArgs { lobby = joinedLobby });
-
-                if (!IsPlayerInLobby()) {
-                    // Player was kicked out of this lobby
-                    Debug.Log("Kicked from Lobby!");
-
-                    OnKickedFromLobby?.Invoke(this, new LobbyEventArgs { lobby = joinedLobby });
-
-                    joinedLobby = null;
-                }
-
-                if (joinedLobby.Data[KEY_START_GAME].Value != "0")
+                try
                 {
-                    //START GAME
-                    if (!IsLobbyHost())
+                    joinedLobby = await LobbyService.Instance.GetLobbyAsync(joinedLobby.Id);
+
+                    OnJoinedLobbyUpdate?.Invoke(this, new LobbyEventArgs { lobby = joinedLobby });
+
+                    if (!IsPlayerInLobby())
                     {
-                        ServerRelay.Instance.TryJoinRelay(joinedLobby.Data[KEY_START_GAME].Value);
+                        Debug.Log("Kicked from Lobby!");
+                        OnKickedFromLobby?.Invoke(this, new LobbyEventArgs { lobby = joinedLobby });
+                        joinedLobby = null;
                     }
 
-                    joinedLobby = null;
-
-                    OnGameStarted?.Invoke(this, EventArgs.Empty);
+                    if (joinedLobby.Data[KEY_START_GAME].Value != "0")
+                    {
+                        if (!IsLobbyHost())
+                        {
+                            ServerRelay.Instance.TryJoinRelay(joinedLobby.Data[KEY_START_GAME].Value);
+                        }
+                        OnGameStarted?.Invoke(this, EventArgs.Empty);
+                    }
+                }
+                catch (LobbyServiceException e)
+                {
+                    Debug.LogWarning("Lobby polling failed: " + e.Message);
                 }
             }
         }
@@ -403,19 +409,16 @@ public class LobbyManager : MonoBehaviour {
         }
     }
 
-    public string GetPlayerNameById(string playerId)
+    public Player GetPlayerById(string playerId)
     {
-        if (joinedLobby != null)
+        if (joinedLobby != null && joinedLobby.Players != null)
         {
             foreach (var player in joinedLobby.Players)
             {
-                if (player.Id == playerId && player.Data.TryGetValue(KEY_PLAYER_NAME, out var data))
-                {
-                    return data.Value;
-                }
+                if (player.Id == playerId) return player;
             }
         }
-        return "Unknown";
-    }
 
+        return null;
+    }
 }

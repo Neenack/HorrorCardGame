@@ -1,23 +1,33 @@
 using TMPro;
+using Unity.Collections;
+using Unity.VisualScripting;
 using UnityEngine;
 
 public class PlayerNameTag : MonoBehaviour
 {
     [SerializeField] private TextMeshProUGUI nameText;
-
     private PlayerData playerData;
 
-    private void OnEnable()
+    private void Awake()
     {
         playerData = GetComponentInParent<PlayerData>();
-        playerData.OnPlayerSpawned += PlayerData_OnPlayerSpawned;
+        if (playerData != null)
+        {
+            SetNameTag(playerData.GetName());
+
+            playerData.OnPlayerSpawned += PlayerData_OnPlayerSpawned;
+        }
     }
 
-    private void PlayerData_OnPlayerSpawned(PlayerData obj)
+    private void OnDestroy()
+    {
+        if (playerData != null) playerData.OnPlayerSpawned -= PlayerData_OnPlayerSpawned;
+    }
+
+    private void PlayerData_OnPlayerSpawned()
     {
         SetNameTag(playerData.GetName());
     }
-
 
     public void SetNameTag(string name)
     {
