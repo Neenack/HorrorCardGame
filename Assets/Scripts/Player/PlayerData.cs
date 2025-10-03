@@ -1,8 +1,8 @@
 using System;
 using Unity.Collections;
 using Unity.Netcode;
+using Unity.Services.Authentication;
 using UnityEngine;
-using UnityEngine.UIElements;
 
 public class PlayerData : NetworkBehaviour
 {
@@ -18,27 +18,49 @@ public class PlayerData : NetworkBehaviour
 
     public override void OnNetworkSpawn()
     {
+        // Place player at table if available
         Transform standPos = TableSeater.Instance.TrySetPlayerAtTable(this);
-
         if (standPos != null)
         {
             transform.position = standPos.position;
             transform.rotation = standPos.rotation;
             controller?.DisableMovement();
         }
-        else //No seats at the table, enable movement
+        else
         {
             controller?.EnableMovement();
         }
 
-        if (IsServer)
+        // Only the owning client tells the server its PlayerId
+        if (IsOwner)
         {
-            playerName.Value = "Player " + OwnerClientId.ToString();
+            string authId = AuthenticationService.Instance.PlayerId;
+            if (IsServer)
+            {
+                // Host can set its own name directly
+                ApplyPlayerName(authId);
+            }
+            else
+            {
+                // Remote client asks the server to set it
+                SetPlayerIdServerRpc(authId);
+            }
         }
 
         PlayerManager.Instance.RegisterPlayer(this);
-
         OnPlayerSpawned?.Invoke(this);
+    }
+
+    private void ApplyPlayerName(string playerId)
+    {
+        string lobbyName = LobbyManager.Instance.GetPlayerNameById(playerId);
+        playerName.Value = string.IsNullOrEmpty(lobbyName) ? "Player " + OwnerClientId : lobbyName;
+    }
+
+    [ServerRpc]
+    private void SetPlayerIdServerRpc(string playerId)
+    {
+        ApplyPlayerName(playerId);
     }
 
     public string GetName() => playerName.Value;

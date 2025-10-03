@@ -25,7 +25,7 @@ public class CambioPlayerAI : PlayerAI<CambioPlayer, CambioActionData, CambioPla
             TurnContext.AfterDraw => AfterDraw(),
             TurnContext.CardAbility => CardAbility(),
             TurnContext.AfterTurn => AfterTurn(),
-            _ => new CambioActionData(CambioActionType.None, true, player.PlayerId)
+            _ => new CambioActionData(CambioActionType.None, true, player.TablePlayerID)
         };
     }
 
@@ -33,10 +33,10 @@ public class CambioPlayerAI : PlayerAI<CambioPlayer, CambioActionData, CambioPla
     {
         if (ShouldCallCambio())
         {
-            return new CambioActionData(CambioActionType.CallCambio, true, player.PlayerId);
+            return new CambioActionData(CambioActionType.CallCambio, true, player.TablePlayerID);
         }
 
-        return new CambioActionData(CambioActionType.Draw, false, player.PlayerId);
+        return new CambioActionData(CambioActionType.Draw, false, player.TablePlayerID);
     }
 
     private CambioActionData AfterDraw()
@@ -45,7 +45,7 @@ public class CambioPlayerAI : PlayerAI<CambioPlayer, CambioActionData, CambioPla
 
         if (DrawnCard == null)
         {
-            return new CambioActionData(CambioActionType.None, true, player.PlayerId);
+            return new CambioActionData(CambioActionType.None, true, player.TablePlayerID);
         }
 
         int cardValue = CambioPlayer.GetCardValue(DrawnCard);
@@ -53,7 +53,7 @@ public class CambioPlayerAI : PlayerAI<CambioPlayer, CambioActionData, CambioPla
         //If card is above 5, discard
         if (cardValue > 5)
         {
-            return new CambioActionData(CambioActionType.Discard, cardValue < 6, player.PlayerId, DrawnCard.NetworkObjectId);
+            return new CambioActionData(CambioActionType.Discard, cardValue < 6, player.TablePlayerID, DrawnCard.NetworkObjectId);
         }
 
         //If AI has not seen all of its cards then swap
@@ -64,52 +64,52 @@ public class CambioPlayerAI : PlayerAI<CambioPlayer, CambioActionData, CambioPla
         {
             PlayingCard cardToRemove = GetCardtoSwap();
 
-            return new CambioActionData(CambioActionType.TradeCard, true, player.PlayerId, cardToRemove.NetworkObjectId, player.PlayerId, DrawnCard.NetworkObjectId);
+            return new CambioActionData(CambioActionType.TradeCard, true, player.TablePlayerID, cardToRemove.NetworkObjectId, player.TablePlayerID, DrawnCard.NetworkObjectId);
         }
 
         //Discard
-        return new CambioActionData(CambioActionType.Discard, cardValue < 6, player.PlayerId, DrawnCard.NetworkObjectId);
+        return new CambioActionData(CambioActionType.Discard, cardValue < 6, player.TablePlayerID, DrawnCard.NetworkObjectId);
     }
 
     private CambioActionData CardAbility()
     {
         PlayingCard AbilityCard = PlayingCard.GetPlayingCardFromNetworkID(player.Game.PileCardID.Value);
 
-        if (AbilityCard == null) return new CambioActionData(CambioActionType.None, true, player.PlayerId);
+        if (AbilityCard == null) return new CambioActionData(CambioActionType.None, true, player.TablePlayerID);
 
         int cardValue = CambioPlayer.GetCardValue(AbilityCard);
-        if (cardValue < 6) return new CambioActionData(CambioActionType.None, true, player.PlayerId);
+        if (cardValue < 6) return new CambioActionData(CambioActionType.None, true, player.TablePlayerID);
 
         switch (cardValue)
         {
             case 6:
             case 7: //LOOK AT YOUR OWN CARD
                 PlayingCard cardToReveal = GetCardToReveal();
-                return new CambioActionData(CambioActionType.RevealCard, true, player.PlayerId, cardToReveal.NetworkObjectId, player.PlayerId, cardToReveal.NetworkObjectId);
+                return new CambioActionData(CambioActionType.RevealCard, true, player.TablePlayerID, cardToReveal.NetworkObjectId, player.TablePlayerID, cardToReveal.NetworkObjectId);
 
             case 8:
             case 9: //LOOK AT ANOTHER CARD
                 CambioPlayer randomPlayer = GetRandomPlayer();
                 PlayingCard randomCard = GetRandomCard(randomPlayer);
-                return new CambioActionData(CambioActionType.RevealCard, true, player.PlayerId, 0, randomPlayer.PlayerId, randomCard.NetworkObjectId);
+                return new CambioActionData(CambioActionType.RevealCard, true, player.TablePlayerID, 0, randomPlayer.TablePlayerID, randomCard.NetworkObjectId);
 
             case 10: //SWAP HANDS
                 if (ShouldSwapHand())
                 {
-                    return new CambioActionData(CambioActionType.SwapHand, true, player.PlayerId, 0, GetRandomPlayer().PlayerId, 0);
+                    return new CambioActionData(CambioActionType.SwapHand, true, player.TablePlayerID, 0, GetRandomPlayer().TablePlayerID, 0);
                 }
                 ConsoleLog.Instance.Log($"{player.GetName()} (AI) Chose not to swap hands");
                 break;
 
             case 11: //COMPARE 2 AND CHOOSE 1 TO KEEP
                 CambioPlayer otherPlayer = GetRandomPlayer();
-                return new CambioActionData(CambioActionType.CompareCards, false, player.PlayerId, GetCardtoSwap().NetworkObjectId, otherPlayer.PlayerId, GetRandomCard(otherPlayer).NetworkObjectId);
+                return new CambioActionData(CambioActionType.CompareCards, false, player.TablePlayerID, GetCardtoSwap().NetworkObjectId, otherPlayer.TablePlayerID, GetRandomCard(otherPlayer).NetworkObjectId);
 
             case 12: //BLIND SWAP
                 if (ShouldBlindSwap())
                 {
                     otherPlayer = GetRandomPlayer();
-                    return new CambioActionData(CambioActionType.SwapCard, true, player.PlayerId, GetCardtoSwap().NetworkObjectId, otherPlayer.PlayerId, GetRandomCard(otherPlayer).NetworkObjectId);
+                    return new CambioActionData(CambioActionType.SwapCard, true, player.TablePlayerID, GetCardtoSwap().NetworkObjectId, otherPlayer.TablePlayerID, GetRandomCard(otherPlayer).NetworkObjectId);
                 }
                 ConsoleLog.Instance.Log($"{player.GetName()} (AI) Chose not to swap cards");
                 break;
@@ -118,12 +118,12 @@ public class CambioPlayerAI : PlayerAI<CambioPlayer, CambioActionData, CambioPla
                 if (AbilityCard.Suit == Suit.Diamonds || AbilityCard.Suit == Suit.Hearts)
                 {
                     //Debug.Log("AI: Reveal whole hand");
-                    return new CambioActionData(CambioActionType.RevealHand, true, player.PlayerId, 0, player.PlayerId, 0);
+                    return new CambioActionData(CambioActionType.RevealHand, true, player.TablePlayerID, 0, player.TablePlayerID, 0);
                 }
                 break;
         }
 
-        return new CambioActionData(CambioActionType.None, true, player.PlayerId);
+        return new CambioActionData(CambioActionType.None, true, player.TablePlayerID);
     }
 
     private CambioActionData AfterTurn()
@@ -131,10 +131,10 @@ public class CambioPlayerAI : PlayerAI<CambioPlayer, CambioActionData, CambioPla
         if (CanStack())
         {
             PlayingCard cardToStack = GetCardToStack();
-            if (cardToStack != null) return new CambioActionData(CambioActionType.Stack, false, player.PlayerId, cardToStack.NetworkObjectId, player.PlayerId, cardToStack.NetworkObjectId);
+            if (cardToStack != null) return new CambioActionData(CambioActionType.Stack, false, player.TablePlayerID, cardToStack.NetworkObjectId, player.TablePlayerID, cardToStack.NetworkObjectId);
         }
 
-        return new CambioActionData(CambioActionType.None, false, player.PlayerId);
+        return new CambioActionData(CambioActionType.None, false, player.TablePlayerID);
     }
 
 

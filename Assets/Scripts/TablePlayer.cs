@@ -46,7 +46,7 @@ public abstract class TablePlayer<TPlayer, TAction, TAI> : NetworkBehaviour
     public PlayerHand Hand => hand;
     public NetworkList<ulong> HandCardIDs => handCardIds;
     public TAI PlayerAI => playerAI;
-    public ulong PlayerId => tablePlayerId.Value;
+    public ulong TablePlayerID => tablePlayerId.Value;
     public Transform PlayerStandTransform => playerStandTransform;
 
     #endregion
@@ -151,12 +151,12 @@ public abstract class TablePlayer<TPlayer, TAction, TAI> : NetworkBehaviour
 
         DisableHandAndUnsubscribe();
 
-        if (oldValue == PlayerId && isTurn)
+        if (oldValue == TablePlayerID && isTurn)
         {
             EndPlayerTurn();
         }
 
-        if (newValue == PlayerId && game.CurrentOwnerClientTurnID.Value == NetworkManager.Singleton.LocalClientId)
+        if (newValue == TablePlayerID && game.CurrentOwnerClientTurnID.Value == NetworkManager.Singleton.LocalClientId)
         {
             StartPlayerTurn();
         }

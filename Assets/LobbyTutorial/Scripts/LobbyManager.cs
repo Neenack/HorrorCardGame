@@ -18,6 +18,9 @@ public class LobbyManager : MonoBehaviour {
     public const string KEY_GAME_MODE = "GameMode";
     public const string KEY_START_GAME = "StartGame";
 
+    private bool hasStartedGame = false;
+    public bool HasStartedGame => hasStartedGame;
+
 
 
     public event EventHandler OnLeftLobby;
@@ -47,7 +50,6 @@ public class LobbyManager : MonoBehaviour {
         Ninja,
         Zombie
     }
-
 
 
     private float heartbeatTimer;
@@ -133,7 +135,7 @@ public class LobbyManager : MonoBehaviour {
                     //START GAME
                     if (!IsLobbyHost())
                     {
-                        TestRelay.Instance.TryJoinRelay(joinedLobby.Data[KEY_START_GAME].Value);
+                        ServerRelay.Instance.TryJoinRelay(joinedLobby.Data[KEY_START_GAME].Value);
                     }
 
                     joinedLobby = null;
@@ -378,12 +380,11 @@ public class LobbyManager : MonoBehaviour {
 
     public async void StartGame()
     {
-        if (IsLobbyHost())
+        if (IsLobbyHost() && !hasStartedGame)
         {
             try
             {
-                Debug.Log("StartGame Lobby");
-                string relayCode = await TestRelay.Instance.TryCreateRelay();
+                string relayCode = await ServerRelay.Instance.TryCreateRelay();
 
                 Lobby lobby = await LobbyService.Instance.UpdateLobbyAsync(joinedLobby.Id, new UpdateLobbyOptions
                 {
@@ -392,12 +393,29 @@ public class LobbyManager : MonoBehaviour {
                         {KEY_START_GAME, new DataObject(DataObject.VisibilityOptions.Member, relayCode) }
                     }
                 });
+                hasStartedGame = true;
             }
             catch (LobbyServiceException e)
             {
                 Debug.Log(e);
+                hasStartedGame = false;
             }
         }
+    }
+
+    public string GetPlayerNameById(string playerId)
+    {
+        if (joinedLobby != null)
+        {
+            foreach (var player in joinedLobby.Players)
+            {
+                if (player.Id == playerId && player.Data.TryGetValue(KEY_PLAYER_NAME, out var data))
+                {
+                    return data.Value;
+                }
+            }
+        }
+        return "Unknown";
     }
 
 }

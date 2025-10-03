@@ -8,7 +8,7 @@ using Unity.Services.Relay;
 using Unity.Services.Relay.Models;
 using UnityEngine;
 
-public class TestRelay : MonoSingleton<TestRelay>
+public class ServerRelay : MonoSingleton<ServerRelay>
 {
     private string joinCode = "";
     public string JoinCode => joinCode.ToUpper();

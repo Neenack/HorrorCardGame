@@ -5,10 +5,8 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-public class EditPlayerName : MonoBehaviour {
-
-
-    public static EditPlayerName Instance { get; private set; }
+public class EditPlayerName : MonoSingleton<EditPlayerName> 
+{
 
 
     public event EventHandler OnNameChanged;
@@ -21,8 +19,6 @@ public class EditPlayerName : MonoBehaviour {
 
 
     private void Awake() {
-        Instance = this;
-
         GetComponent<Button>().onClick.AddListener(() => {
             UI_InputWindow.Show_Static("Player Name", playerName, "abcdefghijklmnopqrstuvxywzABCDEFGHIJKLMNOPQRSTUVXYWZ .,-", 20,
             () => {
@@ -37,6 +33,7 @@ public class EditPlayerName : MonoBehaviour {
             });
         });
 
+        playerName = playerName + UnityEngine.Random.Range(1, 100);
         playerNameText.text = playerName;
     }
 

@@ -194,8 +194,8 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
         if (!player.IsAI)
         {
             //Set hand and drawn card interactable for the player client, and subscribe them to the event for card drawing
-            player.RequestSetHandInteractable(true, new CambioActionData(CambioActionType.Draw, false, currentPlayer.PlayerId));
-            player.RequestSetCardInteractable(drawnCard.NetworkObjectId, true, new CambioActionData(CambioActionType.Draw, false, currentPlayer.PlayerId));
+            player.RequestSetHandInteractable(true, new CambioActionData(CambioActionType.Draw, false, currentPlayer.TablePlayerID));
+            player.RequestSetCardInteractable(drawnCard.NetworkObjectId, true, new CambioActionData(CambioActionType.Draw, false, currentPlayer.TablePlayerID));
         }
         else StartCoroutine(HandleAIDrawDecision());
     }
@@ -246,7 +246,7 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
 
             playerScores[player] = score;
             ConsoleLog.Instance.Log($"{player.GetName()} has a score of {score}");
-            ShowScoreClientRpc(player.PlayerId, score);
+            ShowScoreClientRpc(player.TablePlayerID, score);
 
             yield return new WaitForSeconds(timeBetweenPlayerReveals);
         }
@@ -322,7 +322,7 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
                 break;
 
             case CambioActionType.RevealCard:
-                if (targetPlayer.PlayerId == player.PlayerId) yield return StartCoroutine(RevealCardCoroutine(targetCard, targetPlayer, targetCard.transform.position)); //If revealing your own card
+                if (targetPlayer.TablePlayerID == player.TablePlayerID) yield return StartCoroutine(RevealCardCoroutine(targetCard, targetPlayer, targetCard.transform.position)); //If revealing your own card
                 else yield return StartCoroutine(RevealCardCoroutine(targetCard, player, currentPlayer.transform.position)); //Revealing someone elses card
                 break;
 
@@ -347,14 +347,14 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
                 player.TryAddSeenCard(targetCard);
                 if (!currentPlayer.IsAI)
                 {
-                    currentPlayer.RequestSetCardInteractable(playerCard.NetworkObjectId, true, new CambioActionData(CambioActionType.CompareCards, true, currentPlayer.PlayerId));
-                    currentPlayer.RequestSetCardInteractable(targetCard.NetworkObjectId, true, new CambioActionData(CambioActionType.CompareCards, true, currentPlayer.PlayerId));
+                    currentPlayer.RequestSetCardInteractable(playerCard.NetworkObjectId, true, new CambioActionData(CambioActionType.CompareCards, true, currentPlayer.TablePlayerID));
+                    currentPlayer.RequestSetCardInteractable(targetCard.NetworkObjectId, true, new CambioActionData(CambioActionType.CompareCards, true, currentPlayer.TablePlayerID));
                 }
                 else
                 {
                     selectedCards.Add(playerCard);
                     selectedCards.Add(targetCard);
-                    StartCoroutine(ExecuteActionRoutine(new CambioActionData(CambioActionType.ChooseCard, false, currentPlayer.PlayerId, 0, 0, currentPlayer.PlayerAI.ChooseBetween2Cards(playerCard, targetCard).NetworkObjectId)));
+                    StartCoroutine(ExecuteActionRoutine(new CambioActionData(CambioActionType.ChooseCard, false, currentPlayer.TablePlayerID, 0, 0, currentPlayer.PlayerAI.ChooseBetween2Cards(playerCard, targetCard).NetworkObjectId)));
                 }
                 yield break;
             case CambioActionType.ChooseCard:
@@ -401,7 +401,7 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
             case 6:
             case 7:
                 Debug.Log("Look at your own card!");
-                currentPlayer.RequestSetHandInteractable(true, new CambioActionData(CambioActionType.RevealCard, true, currentPlayer.PlayerId));
+                currentPlayer.RequestSetHandInteractable(true, new CambioActionData(CambioActionType.RevealCard, true, currentPlayer.TablePlayerID));
                 currentPlayer.SetHandInteractDisplay(new InteractDisplay("", true, "Reveal Card", "Shows you the playing card"));
                 break;
             case 8:
@@ -411,7 +411,7 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
                 foreach (var player in Players)
                 {
                     if (player == currentPlayer) continue;
-                    player.RequestSetHandInteractable(true, new CambioActionData(CambioActionType.RevealCard, true, currentPlayer.PlayerId));
+                    player.RequestSetHandInteractable(true, new CambioActionData(CambioActionType.RevealCard, true, currentPlayer.TablePlayerID));
                     player.SetHandInteractDisplay(new InteractDisplay("", true, "Reveal Card", "Shows you the playing card"));
                 }
                 break;
@@ -421,24 +421,24 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
                 foreach (var player in Players)
                 {
                     if (player == currentPlayer) continue;
-                    player.RequestSetHandInteractable(true, new CambioActionData(CambioActionType.SwapHand, true, currentPlayer.PlayerId));
+                    player.RequestSetHandInteractable(true, new CambioActionData(CambioActionType.SwapHand, true, currentPlayer.TablePlayerID));
                     player.SetHandInteractDisplay(new InteractDisplay("", true, "Swap Hand", $"Swap your whole hand with {player.GetName()}"));
                 }
                 break;
             case 11:
                 Debug.Log("Choose 2 cards to decide to swap");
-                currentPlayer.RequestSetHandInteractable(true, new CambioActionData(CambioActionType.SelectCard, false, currentPlayer.PlayerId));
+                currentPlayer.RequestSetHandInteractable(true, new CambioActionData(CambioActionType.SelectCard, false, currentPlayer.TablePlayerID));
                 currentPlayer.SetHandInteractDisplay(new InteractDisplay("", true, "Compare Cards", "Select a card to compare"));
                 break;
             case 12:
                 Debug.Log("Blind swap!");
-                currentPlayer.RequestSetHandInteractable(true, new CambioActionData(CambioActionType.SelectCard, false, currentPlayer.PlayerId));
+                currentPlayer.RequestSetHandInteractable(true, new CambioActionData(CambioActionType.SelectCard, false, currentPlayer.TablePlayerID));
                 currentPlayer.SetHandInteractDisplay(new InteractDisplay("", true, "Blind Swap", "Select a card to swap"));
                 break;
 
             case 13:
                 Debug.Log("Look at all your cards!");
-                StartCoroutine(ExecuteActionRoutine(new CambioActionData(CambioActionType.RevealHand, true, currentPlayer.PlayerId, 0, currentPlayer.PlayerId, 0)));
+                StartCoroutine(ExecuteActionRoutine(new CambioActionData(CambioActionType.RevealHand, true, currentPlayer.TablePlayerID, 0, currentPlayer.TablePlayerID, 0)));
                 break;
         }
     }
@@ -462,7 +462,7 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
 
             if (value == 11) //CHOOSE BETWEEN CARDS
             {
-                StartCoroutine(ExecuteActionRoutine(new CambioActionData(CambioActionType.CompareCards, false, currentPlayer.PlayerId, selectedCards[0].NetworkObjectId, 0, selectedCards[1].NetworkObjectId)));
+                StartCoroutine(ExecuteActionRoutine(new CambioActionData(CambioActionType.CompareCards, false, currentPlayer.TablePlayerID, selectedCards[0].NetworkObjectId, 0, selectedCards[1].NetworkObjectId)));
             }
 
             else if (value == 12) //SWAP CARDS
@@ -472,7 +472,7 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
 
                 CambioPlayer otherPlayer = GetPlayerWithCard(otherCardChoice);
 
-                StartCoroutine(ExecuteActionRoutine(new CambioActionData(CambioActionType.SwapCard, true, currentPlayer.PlayerId, playerCardChoice.NetworkObjectId, otherPlayer.PlayerId,otherCardChoice.NetworkObjectId)));
+                StartCoroutine(ExecuteActionRoutine(new CambioActionData(CambioActionType.SwapCard, true, currentPlayer.TablePlayerID, playerCardChoice.NetworkObjectId, otherPlayer.TablePlayerID,otherCardChoice.NetworkObjectId)));
             }
         }
         else if (selectedCards.Count == 1)
@@ -480,12 +480,12 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
             Debug.Log("[Server] Select another players card!");
 
             CambioPlayer playerWithCard = GetPlayerWithCard(card);
-            if (playerWithCard.PlayerId == currentPlayer.PlayerId)
+            if (playerWithCard.TablePlayerID == currentPlayer.TablePlayerID)
             {
                 foreach (var player in Players)
                 {
                     if (player == currentPlayer) continue;
-                    player.RequestSetHandInteractable(true, new CambioActionData(CambioActionType.SelectCard, false, currentPlayer.PlayerId));
+                    player.RequestSetHandInteractable(true, new CambioActionData(CambioActionType.SelectCard, false, currentPlayer.TablePlayerID));
                 }
             }
         }
@@ -501,12 +501,12 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
         //If they chose their current card do nothing
         if (currentPlayer.Hand.Cards.Contains(chosenCard))
         {
-            StartCoroutine(ExecuteActionRoutine(new CambioActionData(CambioActionType.None, true, currentPlayer.PlayerId)));
+            StartCoroutine(ExecuteActionRoutine(new CambioActionData(CambioActionType.None, true, currentPlayer.TablePlayerID)));
         }
         else
         {
             CambioPlayer otherPlayer = GetPlayerWithCard(chosenCard);
-            StartCoroutine(ExecuteActionRoutine(new CambioActionData(CambioActionType.SwapCard, true, currentPlayer.PlayerId, otherCard.NetworkObjectId, otherPlayer.PlayerId, chosenCard.NetworkObjectId)));
+            StartCoroutine(ExecuteActionRoutine(new CambioActionData(CambioActionType.SwapCard, true, currentPlayer.TablePlayerID, otherCard.NetworkObjectId, otherPlayer.TablePlayerID, chosenCard.NetworkObjectId)));
         }
 
     }
@@ -551,7 +551,7 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
 
         yield return new WaitForSeconds(1f);
 
-        if (playerWithCard.PlayerId == playerWhoStacked.PlayerId)
+        if (playerWithCard.TablePlayerID == playerWhoStacked.TablePlayerID)
         {
             ConsoleLog.Instance.Log($"{playerWithCard.GetName()} tried stacking their own card!");
             if (!isCorrect) //DEAL CARD BACK TO PLAYER AND ANOTHER ONE
@@ -575,7 +575,7 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
                 playerToRecieveCard = playerWithCard;
 
                 //Player who stacked can give one of their cards to the other player
-                playerWhoStacked.RequestSetHandInteractable(true, new CambioActionData(CambioActionType.GiveCard, false, playerWhoStacked.PlayerId));
+                playerWhoStacked.RequestSetHandInteractable(true, new CambioActionData(CambioActionType.GiveCard, false, playerWhoStacked.TablePlayerID));
 
                 yield return new WaitUntil(() => waitingForStackInput == false);
             }

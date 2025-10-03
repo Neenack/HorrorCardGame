@@ -271,7 +271,7 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
         yield return new WaitForSeconds(1f);
 
         //change the turn id
-        currentPlayerTurnId.Value = currentPlayer.PlayerId;
+        currentPlayerTurnId.Value = currentPlayer.TablePlayerID;
 
         if (currentPlayer.IsAI)
         {
@@ -595,7 +595,7 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
     /// </summary>
     protected TPlayer GetPlayerFromPlayerID(ulong playerID)
     {
-        foreach (var player in tablePlayers) if (player?.PlayerId == playerID) return player;
+        foreach (var player in tablePlayers) if (player?.TablePlayerID == playerID) return player;
         return null;
     }
 
