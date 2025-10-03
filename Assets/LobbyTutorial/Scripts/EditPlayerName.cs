@@ -7,8 +7,6 @@ using UnityEngine.UI;
 
 public class EditPlayerName : MonoSingleton<EditPlayerName> 
 {
-
-
     public event EventHandler OnNameChanged;
 
 
