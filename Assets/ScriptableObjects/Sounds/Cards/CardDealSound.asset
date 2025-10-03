@@ -16,10 +16,9 @@ MonoBehaviour:
   clipVariations:
   - {fileID: 8300000, guid: b59ea6c23cc1d4241ab6ebeea7493464, type: 3}
   - {fileID: 8300000, guid: fc9998cedfd135f4dad370cc5f2cf9ab, type: 3}
-  - {fileID: 8300000, guid: 993125366599638488eff58b24d1d4c2, type: 3}
   volume: 1
   pitch: 1
-  randomizePitch: 0
+  randomizePitch: 1
   pitchVariation: 0.1
   is3D: 1
   maxDistance: 50

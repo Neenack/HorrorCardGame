@@ -12,4 +12,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 60800de7da6cd91468cad3dd441067a5, type: 3}
   m_Name: SL_PlayingCard
   m_EditorClassIdentifier: Assembly-CSharp::SoundLibrarySO
-  sounds: []
+  sounds:
+  - key: CardDeal
+    sound: {fileID: 11400000, guid: 5bae783d07f891147b5cb009b45848bd, type: 2}
+  - key: CardFlip
+    sound: {fileID: 11400000, guid: 2739d0742dcf72d4b818a5ed87f3977d, type: 2}
+  - key: CardSetPile
+    sound: {fileID: 11400000, guid: b2acae86edbc4ff49ab18ef3e76edda8, type: 2}
+  - key: CardSetTable
+    sound: {fileID: 11400000, guid: fbf69dc338c90bf44b19a0707f26850f, type: 2}

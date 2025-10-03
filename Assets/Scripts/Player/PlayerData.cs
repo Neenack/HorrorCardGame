@@ -25,6 +25,8 @@ public class PlayerData : NetworkBehaviour
 
     public override void OnNetworkSpawn()
     {
+        if (Camera.main != null) Camera.main.gameObject.SetActive(false);
+
         // Place player at table if available
         Transform standPos = TableSeater.Instance.TrySetPlayerAtTable(this);
         if (standPos != null)

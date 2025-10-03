@@ -111,7 +111,7 @@ public class LobbyUI : MonoSingleton<LobbyUI>
 
     private void ClearLobby() {
         foreach (Transform child in container) {
-            if (child == playerSingleTemplate) continue;
+            if (child == playerSingleTemplate || child.gameObject == null) continue;
             Destroy(child.gameObject);
         }
     }

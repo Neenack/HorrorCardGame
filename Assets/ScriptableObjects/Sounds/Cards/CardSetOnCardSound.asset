@@ -13,7 +13,8 @@ MonoBehaviour:
   m_Name: CardSetOnCardSound
   m_EditorClassIdentifier: Assembly-CSharp::SoundDataSO
   clip: {fileID: 8300000, guid: 57e5198d457ff5d4b9c41e9394ec042a, type: 3}
-  clipVariations: []
+  clipVariations:
+  - {fileID: 8300000, guid: 609ca8ad5cf04d145b46231cf80c3948, type: 3}
   volume: 1
   pitch: 1
   randomizePitch: 0

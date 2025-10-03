@@ -12,8 +12,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fbe01b6eff9cfe941811ed56d58dc328, type: 3}
   m_Name: CardSetOnTableSound
   m_EditorClassIdentifier: Assembly-CSharp::SoundDataSO
-  clip: {fileID: 8300000, guid: 57e5198d457ff5d4b9c41e9394ec042a, type: 3}
-  clipVariations: []
+  clip: {fileID: 8300000, guid: a96d56344638bc74696044e1414e4d1f, type: 3}
+  clipVariations:
+  - {fileID: 8300000, guid: 472158c5fbdba874c906e1e7ab2b5331, type: 3}
+  - {fileID: 8300000, guid: f3e6658e0d13c454cae8492423d0406c, type: 3}
+  - {fileID: 8300000, guid: 02f04dd714f7e0a43b621d7cb5ab621b, type: 3}
   volume: 1
   pitch: 1
   randomizePitch: 0

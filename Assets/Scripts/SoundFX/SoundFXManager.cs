@@ -9,9 +9,9 @@ public class SoundFXManager : NetworkSingleton<SoundFXManager>
     [Header("Sound Library")]
     [SerializeField] private List<SoundLibrarySO> soundLibraries;
 
-    private Dictionary<string, SoundDataSO> soundLookup;
-    private Dictionary<SoundDataSO, int> soundToIndexMap;
-    private List<SoundDataSO> soundList;
+    private Dictionary<string, SoundDataSO> soundLookup = new Dictionary<string, SoundDataSO>();
+    private Dictionary<SoundDataSO, int> soundToIndexMap = new Dictionary<SoundDataSO, int>();
+    private List<SoundDataSO> soundList = new List<SoundDataSO>();
 
     [Header("Pooling Settings")]
     [SerializeField] private int initialPoolSize = 10;

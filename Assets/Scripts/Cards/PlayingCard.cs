@@ -129,6 +129,8 @@ public class PlayingCard : NetworkBehaviour
             return;
         }
 
+        SoundFXManager.PlaySoundServer("CardDeal", transform.position);
+
         targetPos = target;
         speed = lerpSpeed;
         moving = true;

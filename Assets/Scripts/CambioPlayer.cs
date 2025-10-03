@@ -110,7 +110,7 @@ public class CambioPlayer : TablePlayer<CambioPlayer, CambioActionData, CambioPl
 
     #endregion
 
-        #region Interaction
+    #region Interaction
 
         #region Interact Event Switch
 
