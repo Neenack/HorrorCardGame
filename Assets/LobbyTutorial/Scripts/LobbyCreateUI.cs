@@ -66,14 +66,20 @@ public class LobbyCreateUI : MonoBehaviour {
             });
         });
 
-        gameModeButton.onClick.AddListener(() => {
+        gameModeButton.onClick.AddListener(() => { //SWITCHING GAMEMODES
             switch (gameMode) {
                 default:
-                case LobbyManager.GameMode.CaptureTheFlag:
-                    gameMode = LobbyManager.GameMode.Conquest;
+                case LobbyManager.GameMode.Cambio:
+                    gameMode = LobbyManager.GameMode.Game2;
                     break;
-                case LobbyManager.GameMode.Conquest:
-                    gameMode = LobbyManager.GameMode.CaptureTheFlag;
+                case LobbyManager.GameMode.Game2:
+                    gameMode = LobbyManager.GameMode.Game3;
+                    break;
+                case LobbyManager.GameMode.Game3:
+                    gameMode = LobbyManager.GameMode.Game4;
+                    break;
+                case LobbyManager.GameMode.Game4:
+                    gameMode = LobbyManager.GameMode.Cambio;
                     break;
             }
             UpdateText();
@@ -99,7 +105,7 @@ public class LobbyCreateUI : MonoBehaviour {
         lobbyName = "MyLobby";
         isPrivate = false;
         maxPlayers = 4;
-        gameMode = LobbyManager.GameMode.CaptureTheFlag;
+        gameMode = LobbyManager.GameMode.Cambio;
 
         UpdateText();
     }

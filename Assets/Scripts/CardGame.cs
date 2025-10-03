@@ -149,7 +149,7 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
     {
         if (gameState.Value != GameState.WaitingToStart) return;
 
-        fillBots = AIToggleUI.Instance.UseAI;
+        fillBots = GamemodeSettings.Instance.UseAI;
         interactableDeck.SetInteractable(fillBots || PlayerManager.Instance.PlayerCount > 1);
     }
 

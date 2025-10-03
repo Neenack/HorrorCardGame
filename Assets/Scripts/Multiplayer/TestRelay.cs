@@ -13,7 +13,7 @@ public class TestRelay : MonoSingleton<TestRelay>
     private string joinCode = "";
     public string JoinCode => joinCode.ToUpper();
 
-    public async Task<bool> TryCreateRelay()
+    public async Task<string> TryCreateRelay()
     {
         try
         {
@@ -26,31 +26,29 @@ public class TestRelay : MonoSingleton<TestRelay>
             var utp = NetworkManager.Singleton.GetComponent<UnityTransport>();
             utp.SetRelayServerData(relayServerData);
             NetworkManager.Singleton.StartHost();
-            return true;
+
+            return joinCode;
         }
         catch (RelayServiceException e)
         {
             Debug.Log(e);
-            return false;
+
+            return null;
         }
     }
 
-    public async Task<bool> TryJoinRelay(string joinCode)
+    public async void TryJoinRelay(string joinCode)
     {
-        this.joinCode = joinCode;
-
         try
         {
             JoinAllocation joinAllocation = await RelayService.Instance.JoinAllocationAsync(joinCode);
             RelayServerData relayServerData = AllocationUtils.ToRelayServerData(joinAllocation, "dtls");
             NetworkManager.Singleton.GetComponent<UnityTransport>().SetRelayServerData(relayServerData);
             NetworkManager.Singleton.StartClient();
-            return true;
         }
         catch (RelayServiceException e)
         {
             Debug.Log(e);
-            return false;
         }
     }
 }

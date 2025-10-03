@@ -6,29 +6,23 @@ using Unity.Services.Lobbies.Models;
 using UnityEngine;
 using UnityEngine.UI;
 
-public class LobbyUI : MonoBehaviour {
-
-
-    public static LobbyUI Instance { get; private set; }
-
+public class LobbyUI : MonoSingleton<LobbyUI>
+{
 
     [SerializeField] private Transform playerSingleTemplate;
     [SerializeField] private Transform container;
     [SerializeField] private TextMeshProUGUI lobbyNameText;
     [SerializeField] private TextMeshProUGUI playerCountText;
     [SerializeField] private TextMeshProUGUI gameModeText;
-    [SerializeField] private Button changeMarineButton;
-    [SerializeField] private Button changeNinjaButton;
-    [SerializeField] private Button changeZombieButton;
     [SerializeField] private Button leaveLobbyButton;
     [SerializeField] private Button changeGameModeButton;
+    [SerializeField] private Button startGameButton;
 
 
     private void Awake() {
-        Instance = this;
-
         playerSingleTemplate.gameObject.SetActive(false);
 
+        /*
         changeMarineButton.onClick.AddListener(() => {
             LobbyManager.Instance.UpdatePlayerCharacter(LobbyManager.PlayerCharacter.Marine);
         });
@@ -38,13 +32,17 @@ public class LobbyUI : MonoBehaviour {
         changeZombieButton.onClick.AddListener(() => {
             LobbyManager.Instance.UpdatePlayerCharacter(LobbyManager.PlayerCharacter.Zombie);
         });
-
+        */
         leaveLobbyButton.onClick.AddListener(() => {
             LobbyManager.Instance.LeaveLobby();
         });
 
         changeGameModeButton.onClick.AddListener(() => {
             LobbyManager.Instance.ChangeGameMode();
+        });
+
+        startGameButton.onClick.AddListener(() => {
+            LobbyManager.Instance.StartGame();
         });
     }
 
@@ -54,7 +52,20 @@ public class LobbyUI : MonoBehaviour {
         LobbyManager.Instance.OnLobbyGameModeChanged += UpdateLobby_Event;
         LobbyManager.Instance.OnLeftLobby += LobbyManager_OnLeftLobby;
         LobbyManager.Instance.OnKickedFromLobby += LobbyManager_OnLeftLobby;
+        LobbyManager.Instance.OnGameStarted += LobbyManager_OnGameStarted;
 
+        Hide();
+    }
+
+    private void Update()
+    {
+        if (!LobbyManager.Instance.IsLobbyHost()) return;
+
+        startGameButton.enabled = LobbyManager.Instance.GetJoinedLobby().Players.Count > 1 || GamemodeSettings.Instance.UseAI;
+    }
+
+    private void LobbyManager_OnGameStarted(object sender, System.EventArgs e)
+    {
         Hide();
     }
 

@@ -28,7 +28,7 @@ public class CambioPlayer : TablePlayer<CambioPlayer, CambioActionData, CambioPl
 
         calledCambioText?.gameObject.SetActive(false);
         scoreText.gameObject.SetActive(false);
-        HideAllButtons();
+        //HideAllButtons();
     }
 
     #region Turn Logic

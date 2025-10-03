@@ -28,9 +28,7 @@ public class PlayerInteractor : NetworkBehaviour
 
     void Start()
     {
-        playerCamera = Camera.main;
-        if (playerCamera == null)
-            Debug.LogError("No Main Camera found! Tag your camera as MainCamera.");
+        playerCamera = GetComponentInChildren<Camera>();
     }
 
     void Update()
