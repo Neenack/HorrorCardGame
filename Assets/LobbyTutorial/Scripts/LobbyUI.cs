@@ -106,7 +106,7 @@ public class LobbyUI : MonoSingleton<LobbyUI>
         gameModeText.text = lobby.Data[LobbyManager.KEY_GAME_MODE].Value;
         lobbyCodeText.text = "Lobby Code: " + lobby.LobbyCode;
 
-        Show();
+        if (!LobbyManager.Instance.HasStartedGame) Show();
     }
 
     private void ClearLobby() {

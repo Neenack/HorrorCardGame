@@ -120,7 +120,7 @@ public class LobbyManager : MonoBehaviour {
             lobbyPollTimer -= Time.deltaTime;
             if (lobbyPollTimer <= 0f)
             {
-                lobbyPollTimer = 3f;
+                lobbyPollTimer = 1.1f;
 
                 try
                 {
@@ -135,13 +135,15 @@ public class LobbyManager : MonoBehaviour {
                         joinedLobby = null;
                     }
 
-                    if (joinedLobby.Data[KEY_START_GAME].Value != "0")
+                    if (joinedLobby.Data[KEY_START_GAME].Value != "0" && !hasStartedGame)
                     {
                         if (!IsLobbyHost())
                         {
                             ServerRelay.Instance.TryJoinRelay(joinedLobby.Data[KEY_START_GAME].Value);
+                            OnGameStarted?.Invoke(this, EventArgs.Empty);
                         }
-                        OnGameStarted?.Invoke(this, EventArgs.Empty);
+
+                        hasStartedGame = true;
                     }
                 }
                 catch (LobbyServiceException e)
@@ -399,7 +401,9 @@ public class LobbyManager : MonoBehaviour {
                         {KEY_START_GAME, new DataObject(DataObject.VisibilityOptions.Member, relayCode) }
                     }
                 });
+
                 hasStartedGame = true;
+                OnGameStarted?.Invoke(this, EventArgs.Empty);
             }
             catch (LobbyServiceException e)
             {
