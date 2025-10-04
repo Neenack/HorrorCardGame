@@ -18,6 +18,6 @@ MonoBehaviour:
   - key: CardFlip
     sound: {fileID: 11400000, guid: 2739d0742dcf72d4b818a5ed87f3977d, type: 2}
   - key: CardSetDown
-    sound: {fileID: 11400000, guid: 0209697b13ce72944a4d6fe229ac1281, type: 2}
+    sound: {fileID: 11400000, guid: fbf69dc338c90bf44b19a0707f26850f, type: 2}
   - key: CardDealToHand
     sound: {fileID: 11400000, guid: 8785ba12a595fe841b2d7615f52a5b91, type: 2}

@@ -33,7 +33,7 @@ public abstract class MonoSingleton<T> : MonoBehaviour where T : MonoSingleton<T
         }
     }
 
-    private void Awake()
+    protected virtual void Awake()
     {
         if (instance == null)
         {
@@ -41,7 +41,7 @@ public abstract class MonoSingleton<T> : MonoBehaviour where T : MonoSingleton<T
         }
     }
 
-    public void OnDestroy()
+    public virtual void OnDestroy()
     {
         instance = null;
     }

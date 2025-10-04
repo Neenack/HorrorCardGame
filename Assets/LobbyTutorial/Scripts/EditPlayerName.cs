@@ -16,7 +16,9 @@ public class EditPlayerName : MonoSingleton<EditPlayerName>
     private string playerName = "TestPlayer";
 
 
-    private void Awake() {
+    protected override void Awake() {
+        base.Awake();
+
         GetComponent<Button>().onClick.AddListener(() => {
             UI_InputWindow.Show_Static("Player Name", playerName, "abcdefghijklmnopqrstuvxywzABCDEFGHIJKLMNOPQRSTUVXYWZ .,-", 20,
             () => {

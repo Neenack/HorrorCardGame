@@ -20,7 +20,9 @@ public class LobbyUI : MonoSingleton<LobbyUI>
     [SerializeField] private Button startGameButton;
 
 
-    private void Awake() {
+    protected override void Awake() {
+        base.Awake();
+
         playerSingleTemplate.gameObject.SetActive(false);
 
         /*

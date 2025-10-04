@@ -1,0 +1,18 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f42e02cc20394243bc4d2992af236df, type: 3}
+  m_Name: ClownJumpscare
+  m_EditorClassIdentifier: Assembly-CSharp::InWorldJumpscareSO
+  id: Clown
+  prefab: {fileID: 3396995468781101441, guid: fd59d6c3c6f3d494baa3d16110094480, type: 3}
+  duration: 0.6
+  offset: {x: 0, y: -0.9, z: 0}
