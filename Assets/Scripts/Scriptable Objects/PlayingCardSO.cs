@@ -6,7 +6,7 @@ using UnityEngine.UIElements;
 
 public enum Suit
 {
-    Hearts, Diamonds, Spades, Clubs
+    Hearts, Diamonds, Spades, Clubs, Joker
 }
 
 [CreateAssetMenu(fileName = "NewCard", menuName = "Cards/Playing Card")]

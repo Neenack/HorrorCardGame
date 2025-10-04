@@ -182,7 +182,7 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
         //Draw new card
         drawnCard = DrawCard();
 
-        JumpscareManager.Instance.Trigger("Clown", player.transform);
+        if (drawnCard.Suit == Suit.Joker) JumpscareManager.Instance.Trigger("Clown", player.transform);
 
         // Position card in front of current player
         BringCardToPlayer(currentPlayer, drawnCard, cardPullPositionOffset);
