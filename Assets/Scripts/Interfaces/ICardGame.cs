@@ -11,6 +11,7 @@ public interface ICardGameEvents
     event Action OnGameEnded;
     event Action OnAnyActionExecuted;
     event Action OnAnyCardDrawn;
+    event Action OnAnyCardPlacedOnPile;
 }
 
 public interface ICardGame<TPlayer, TAction, TAI> : ICardGameEvents

@@ -69,6 +69,7 @@ GameObject:
   - component: {fileID: 952294206459774246}
   - component: {fileID: 3370088753089617180}
   - component: {fileID: 4117870373912163582}
+  - component: {fileID: 1992658521127795146}
   m_Layer: 0
   m_Name: CambioGame
   m_TagString: CardGame
@@ -142,7 +143,7 @@ MonoBehaviour:
   - {fileID: 9132760476750689964}
   - {fileID: 5309102798887453480}
   deckSO: {fileID: 11400000, guid: 81f0720b2e8ef7841aae7f8f931dd339, type: 2}
-  timeBetweenCardDeals: 0.5
+  timeBetweenCardDeals: 0.2
   cardSpawnTransform: {fileID: 2309378037893428197}
   cardPileTransform: {fileID: 1593651811556556494}
   fillBots: 1
@@ -167,6 +168,20 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TableSeater
   ShowTopMostFoldoutHeaderGroup: 1
+--- !u!114 &1992658521127795146
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8663835632188559158}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 101e461bdee1ade41afc70e53f289372, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: '::'
+  ShowTopMostFoldoutHeaderGroup: 1
+  playingCardSounds: {fileID: 11400000, guid: 142ff368b20e933479b1fb6da2df5b61, type: 2}
 --- !u!1001 &1398344346633781626
 PrefabInstance:
   m_ObjectHideFlags: 0

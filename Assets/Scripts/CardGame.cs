@@ -21,6 +21,7 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
     public event Action OnGameEnded;
     public event Action OnAnyActionExecuted;
     public event Action OnAnyCardDrawn;
+    public event Action OnAnyCardPlacedOnPile;
 
     protected NetworkVariable<ulong> currentPlayerTurnId = new NetworkVariable<ulong>(
         ulong.MaxValue,
@@ -412,7 +413,7 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
     /// <summary>
     /// Coroutine to place a card on the card pile
     /// </summary>
-    private IEnumerator PlaceCardOnPileCoroutine(PlayingCard card, bool placeFaceDown = false, float lerpSpeed = 5f)
+    private IEnumerator PlaceCardOnPileCoroutine(PlayingCard card, bool placeFaceDown = false, float lerpSpeed = 3f)
     {
         // Visual card movement
         Vector3 targetPos = cardPileTransform.position;
@@ -430,6 +431,8 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
         // Update server state
         cardPile.Add(card);
         topPileCardId.Value = card.NetworkObjectId;
+
+        OnAnyCardPlacedOnPile?.Invoke();
 
         yield return new WaitForSeconds(timeBetweenCardDeals);
     }

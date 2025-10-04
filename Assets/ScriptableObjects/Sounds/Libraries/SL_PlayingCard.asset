@@ -17,7 +17,7 @@ MonoBehaviour:
     sound: {fileID: 11400000, guid: 5bae783d07f891147b5cb009b45848bd, type: 2}
   - key: CardFlip
     sound: {fileID: 11400000, guid: 2739d0742dcf72d4b818a5ed87f3977d, type: 2}
-  - key: CardSetPile
-    sound: {fileID: 11400000, guid: b2acae86edbc4ff49ab18ef3e76edda8, type: 2}
-  - key: CardSetTable
-    sound: {fileID: 11400000, guid: fbf69dc338c90bf44b19a0707f26850f, type: 2}
+  - key: CardSetDown
+    sound: {fileID: 11400000, guid: 0209697b13ce72944a4d6fe229ac1281, type: 2}
+  - key: CardDealToHand
+    sound: {fileID: 11400000, guid: 8785ba12a595fe841b2d7615f52a5b91, type: 2}

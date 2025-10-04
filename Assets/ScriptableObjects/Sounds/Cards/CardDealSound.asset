@@ -13,12 +13,10 @@ MonoBehaviour:
   m_Name: CardDealSound
   m_EditorClassIdentifier: Assembly-CSharp::SoundDataSO
   clip: {fileID: 8300000, guid: 3455d6ef167cd094b882083a2d304b11, type: 3}
-  clipVariations:
-  - {fileID: 8300000, guid: b59ea6c23cc1d4241ab6ebeea7493464, type: 3}
-  - {fileID: 8300000, guid: fc9998cedfd135f4dad370cc5f2cf9ab, type: 3}
-  volume: 1
+  clipVariations: []
+  volume: 0.2
   pitch: 1
   randomizePitch: 1
-  pitchVariation: 0.1
+  pitchVariation: 0.05
   is3D: 1
   maxDistance: 50

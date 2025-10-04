@@ -10,16 +10,13 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbe01b6eff9cfe941811ed56d58dc328, type: 3}
-  m_Name: CardSetOnTableSound
+  m_Name: CardDealToHandSound
   m_EditorClassIdentifier: Assembly-CSharp::SoundDataSO
-  clip: {fileID: 8300000, guid: a96d56344638bc74696044e1414e4d1f, type: 3}
-  clipVariations:
-  - {fileID: 8300000, guid: 472158c5fbdba874c906e1e7ab2b5331, type: 3}
-  - {fileID: 8300000, guid: f3e6658e0d13c454cae8492423d0406c, type: 3}
-  - {fileID: 8300000, guid: 02f04dd714f7e0a43b621d7cb5ab621b, type: 3}
-  volume: 1
+  clip: {fileID: 8300000, guid: 63eaa6fb20224ef4f90dc2e1ef2a1345, type: 3}
+  clipVariations: []
+  volume: 0.2
   pitch: 1
-  randomizePitch: 0
+  randomizePitch: 1
   pitchVariation: 0.1
   is3D: 1
   maxDistance: 50

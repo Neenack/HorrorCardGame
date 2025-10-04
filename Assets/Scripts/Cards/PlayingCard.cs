@@ -21,6 +21,7 @@ public class PlayingCard : NetworkBehaviour
     private float speed;
     private bool moving = false;
     private bool isFaceDown = true;
+    private Action onMoveComplete = null;
 
     private Quaternion targetRot;
     private bool rotating = false;
@@ -121,7 +122,7 @@ public class PlayingCard : NetworkBehaviour
         OnShowCard?.Invoke(this);
     }
 
-    public void MoveTo(Vector3 target, float lerpSpeed)
+    public void MoveTo(Vector3 target, float lerpSpeed, Action onComplete = null)
     {
         if (!IsServer)
         {
@@ -129,11 +130,10 @@ public class PlayingCard : NetworkBehaviour
             return;
         }
 
-        SoundFXManager.PlaySoundServer("CardDeal", transform.position);
-
         targetPos = target;
         speed = lerpSpeed;
         moving = true;
+        onMoveComplete = onComplete;
 
         // Tell all clients to move too
         MoveToClientRpc(target, lerpSpeed);
@@ -164,6 +164,8 @@ public class PlayingCard : NetworkBehaviour
             if (Vector3.Distance(transform.position, targetPos) < 0.01f)
             {
                 transform.position = targetPos;
+
+                onMoveComplete?.Invoke();
                 moving = false;
             }
         }

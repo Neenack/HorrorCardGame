@@ -10,11 +10,13 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fbe01b6eff9cfe941811ed56d58dc328, type: 3}
-  m_Name: CardSetOnCardSound
+  m_Name: CardSetDownSound
   m_EditorClassIdentifier: Assembly-CSharp::SoundDataSO
-  clip: {fileID: 8300000, guid: 57e5198d457ff5d4b9c41e9394ec042a, type: 3}
+  clip: {fileID: 8300000, guid: a96d56344638bc74696044e1414e4d1f, type: 3}
   clipVariations:
-  - {fileID: 8300000, guid: 609ca8ad5cf04d145b46231cf80c3948, type: 3}
+  - {fileID: 8300000, guid: 472158c5fbdba874c906e1e7ab2b5331, type: 3}
+  - {fileID: 8300000, guid: 02f04dd714f7e0a43b621d7cb5ab621b, type: 3}
+  - {fileID: 8300000, guid: 57e5198d457ff5d4b9c41e9394ec042a, type: 3}
   volume: 1
   pitch: 1
   randomizePitch: 0
