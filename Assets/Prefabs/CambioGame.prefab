@@ -68,8 +68,8 @@ GameObject:
   - component: {fileID: 3572137827428130929}
   - component: {fileID: 952294206459774246}
   - component: {fileID: 3370088753089617180}
+  - component: {fileID: 6758915026341907764}
   - component: {fileID: 4117870373912163582}
-  - component: {fileID: 7788288783198371528}
   - component: {fileID: 1992658521127795146}
   m_Layer: 0
   m_Name: CambioGame
@@ -156,6 +156,19 @@ MonoBehaviour:
   timeBetweenPlayerReveals: 1
   cardStacking: 1
   stackingTime: 2
+--- !u!114 &6758915026341907764
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8663835632188559158}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1bbc96dcc1b7432439c32f0c48976ff9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CambioInteractionManager
+  ShowTopMostFoldoutHeaderGroup: 1
 --- !u!114 &4117870373912163582
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -169,18 +182,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TableSeater
   ShowTopMostFoldoutHeaderGroup: 1
---- !u!114 &7788288783198371528
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8663835632188559158}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 427669e36f9610a44993c1129f46a04a, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::TableInteractionManager
 --- !u!114 &1992658521127795146
 MonoBehaviour:
   m_ObjectHideFlags: 0

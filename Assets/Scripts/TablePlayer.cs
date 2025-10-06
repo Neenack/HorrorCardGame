@@ -49,6 +49,7 @@ public abstract class TablePlayer<TPlayer, TAction, TAI> : NetworkBehaviour
     public TAI PlayerAI => playerAI;
     public ulong TablePlayerID => tablePlayerId.Value;
     public Transform PlayerStandTransform => playerStandTransform;
+    public TablePlayerSendParams SendParams => new TablePlayerSendParams(PlayerData ? PlayerData.OwnerClientId : OwnerClientId, TablePlayerID);
 
     #endregion
 

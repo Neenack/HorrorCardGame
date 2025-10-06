@@ -112,11 +112,11 @@ public class CambioPlayer : TablePlayer<CambioPlayer, CambioActionData, CambioPl
 
     #region Interaction
 
-        #region Interact Event Switch
+    #region Interact Event Switch
 
-        /// <summary>
-        /// When given action data, will subscribe players hand to different actions locally
-        /// </summary>
+    /// <summary>
+    /// When given action data, will subscribe players hand to different actions locally
+    /// </summary>
     protected override EventHandler<InteractEventArgs> GetCardOnInteractEvent(CambioActionData data)
     {
         switch (data.Type)
@@ -347,7 +347,6 @@ public class CambioPlayer : TablePlayer<CambioPlayer, CambioActionData, CambioPl
         {
             foreach (var cardId in player.HandCardIDs)
             {
-                //Debug.Log($"Card with ID:{cardId} has been enabled for stacking for player with ID: {player.PlayerId}");
                 player.SetHandInteractDisplay(new InteractDisplay("", true, "Stack Card", "Try stack a matching card on the pile"));
             }
         }

@@ -353,11 +353,7 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
     /// </summary>
     protected virtual IEnumerator ExecuteActionRoutine(TAction action)
     {
-        if (!IsServer)
-        {
-            Debug.LogWarning("[Client] Only the server can execute actions!");
-            yield break;
-        }
+        if (!IsServer) yield break;
 
         OnAnyActionExecuted?.Invoke();
 
