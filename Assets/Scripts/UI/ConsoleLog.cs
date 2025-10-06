@@ -36,7 +36,13 @@ public class ConsoleLog : NetworkSingleton<ConsoleLog>
     /// </summary>
     public void Log(string message)
     {
-        if (IsServer) message = $"[Server] {message}";
+        if (!IsServer)
+        {
+            LogServerRpc(message);
+            return;
+        }
+
+        message = $"[Server] {message}";
 
         // Add new message
         logQueue.Enqueue(message);
@@ -48,4 +54,6 @@ public class ConsoleLog : NetworkSingleton<ConsoleLog>
         // Rebuild text
         logText.text = string.Join("\n", logQueue);
     }
+
+    [ServerRpc(RequireOwnership = false)] private void LogServerRpc(string message) => Log(message);
 }

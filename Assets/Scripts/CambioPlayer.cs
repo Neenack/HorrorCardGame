@@ -199,7 +199,7 @@ public class CambioPlayer : TablePlayer<CambioPlayer, CambioActionData, CambioPl
     {
         PlayingCard drawnCard = PlayingCard.GetPlayingCardFromNetworkID(Game.DrawnCardID.Value);
         drawnCard.Interactable.SetInteractable(false);
-        UnsubscribeCardFrom(Game.DrawnCardID.Value, Card_OnInteract_AfterDraw);
+        UnsubscribeCardFrom(drawnCard, Card_OnInteract_AfterDraw);
 
         PlayingCard chosenCard = (sender as Interactable).GetComponent<PlayingCard>();
 
@@ -254,7 +254,7 @@ public class CambioPlayer : TablePlayer<CambioPlayer, CambioActionData, CambioPl
         skipAbilityButton.OnInteract += SkipAbilityButton_OnInteract;
     }
 
-    private void DisableAbilityStartedInteraction()
+    private void DisableSkipAbilityInteraction()
     {
         skipAbilityButton.SetInteractable(false);
         skipAbilityButton.gameObject.SetActive(false);
@@ -263,7 +263,7 @@ public class CambioPlayer : TablePlayer<CambioPlayer, CambioActionData, CambioPl
 
     private void SkipAbilityButton_OnInteract(object sender, InteractEventArgs e)
     {
-        DisableAbilityStartedInteraction();
+        DisableSkipAbilityInteraction();
 
         Game.ExecuteAction(e.playerID, new CambioActionData(CambioActionType.None, true, TablePlayerID));
     }
@@ -276,7 +276,7 @@ public class CambioPlayer : TablePlayer<CambioPlayer, CambioActionData, CambioPl
 
     private void Card_OnInteract_RevealCard(object sender, InteractEventArgs e)
     {
-        DisableAbilityStartedInteraction();
+        DisableSkipAbilityInteraction();
 
         ulong cardNetworkId = (sender as Interactable).GetComponent<PlayingCard>().NetworkObjectId;
         ulong playerWithCardId = Game.GetPlayerWithCard(cardNetworkId).TablePlayerID;
@@ -290,7 +290,7 @@ public class CambioPlayer : TablePlayer<CambioPlayer, CambioActionData, CambioPl
 
     private void Card_OnInteract_SwapHand(object sender, InteractEventArgs e)
     {
-        DisableAbilityStartedInteraction();
+        DisableSkipAbilityInteraction();
 
         ulong cardNetworkId = (sender as Interactable).GetComponent<PlayingCard>().NetworkObjectId;
         ulong playerWithCardId = Game.GetPlayerWithCard(cardNetworkId).TablePlayerID;
@@ -314,7 +314,7 @@ public class CambioPlayer : TablePlayer<CambioPlayer, CambioActionData, CambioPl
 
     private void Card_OnInteract_CompareCards(object sender, InteractEventArgs e)
     {
-        DisableAbilityStartedInteraction();
+        DisableSkipAbilityInteraction();
 
         ulong cardNetworkId = (sender as Interactable).GetComponent<PlayingCard>().NetworkObjectId;
 
@@ -348,7 +348,6 @@ public class CambioPlayer : TablePlayer<CambioPlayer, CambioActionData, CambioPl
             foreach (var cardId in player.HandCardIDs)
             {
                 //Debug.Log($"Card with ID:{cardId} has been enabled for stacking for player with ID: {player.PlayerId}");
-                RequestSetCardInteractable(cardId, interactable, new CambioActionData(CambioActionType.Stack, false, player.TablePlayerID));
                 player.SetHandInteractDisplay(new InteractDisplay("", true, "Stack Card", "Try stack a matching card on the pile"));
             }
         }

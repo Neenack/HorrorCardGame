@@ -14,5 +14,5 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PlayingCardSO
   cardPrefab: {fileID: 5832235400658625335, guid: f6a5ce75ea5b7d54689587f6f66dbfc5, type: 3}
   cardTexture: {fileID: 2800000, guid: b39b6597437b68b40aff118ac6d6c6e6, type: 3}
-  suit: 0
-  value: 14
+  suit: 4
+  value: 0

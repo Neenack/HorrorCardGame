@@ -4,6 +4,7 @@ using Unity.Netcode;
 using Unity.VisualScripting;
 using UnityEngine;
 using static Interactable;
+using static UnityEngine.Video.VideoPlayer;
 
 public abstract class TablePlayer<TPlayer, TAction, TAI> : NetworkBehaviour
     where TPlayer : TablePlayer<TPlayer, TAction, TAI>
@@ -286,98 +287,13 @@ public abstract class TablePlayer<TPlayer, TAction, TAI> : NetworkBehaviour
 
     #region Player Interaction
 
-    #region Single Card (No Action)
-    public void RequestSetCardInteractable(ulong cardId, bool interactable)
-    {
-        if (IsServer)
-        {
-            SetCardInteractionClientRpc(cardId, interactable, new ClientRpcParams { Send = new ClientRpcSendParams { TargetClientIds = new ulong[] { Game.CurrentOwnerClientTurnID.Value } } });
-            return;
-        }
-        SetCardInteraction(cardId, interactable);
-    }
-    [ClientRpc] private void SetCardInteractionClientRpc(ulong cardId, bool interactable, ClientRpcParams clientRpcParams) => SetCardInteraction(cardId, interactable);
-
-    #endregion
-
-    #region Single Card (With Action)
-
-    /// <summary>
-    /// Requests for the player to enable interactions for a given card
-    /// </summary>
-    public void RequestSetCardInteractable(ulong cardNetworkID, bool interactable, TAction action)
-    {
-        if (IsServer)
-        {
-            SetCardInteractionClientRpc(cardNetworkID, interactable, action, new ClientRpcParams { Send = new ClientRpcSendParams { TargetClientIds = new ulong[] { PlayerData.OwnerClientId } } });
-            return;
-        }
-        SetCardInteraction(cardNetworkID, interactable, action);
-    }
-    [ClientRpc] private void SetCardInteractionClientRpc(ulong cardNetworkID, bool interactable, TAction action, ClientRpcParams clientRpcParams) => SetCardInteraction(cardNetworkID, interactable, action);
-
-    private void SetCardInteraction(ulong cardNetworkID, bool interactable, TAction? action = null)
-    {
-        PlayingCard cardToInteract = PlayingCard.GetPlayingCardFromNetworkID(cardNetworkID);
-
-        cardToInteract.Interactable.SetInteractable(interactable);
-
-        if (interactable && action.HasValue) SubscribeCardTo(cardNetworkID, GetCardOnInteractEvent(action.Value));
-        if (!interactable && action.HasValue) UnsubscribeCardFrom(cardNetworkID, GetCardOnInteractEvent(action.Value));
-    }
-
-    #endregion
-
-    #region Hand Interactable (No Action)
-
-    public void RequestSetHandInteractable(bool interactable)
-    {
-        if (IsServer)
-        {
-            SetHandInteractableClientRpc(interactable, new ClientRpcParams { Send = new ClientRpcSendParams { TargetClientIds = new ulong[] { Game.CurrentOwnerClientTurnID.Value } } });
-            return;
-        }
-        SetHandInteractable(interactable);
-    }
-    [ClientRpc] private void SetHandInteractableClientRpc(bool interactable, ClientRpcParams clientRpcParams) => SetHandInteractable(interactable);
-
-
-    #endregion
-
-    #region Hand Interactable (With Action)
-    public void RequestSetHandInteractable(bool interactable, TAction action)
-    {
-        if (IsServer)
-        {
-            SetHandInteractableClientRpc(interactable, action, new ClientRpcParams { Send = new ClientRpcSendParams { TargetClientIds = new ulong[] { Game.CurrentOwnerClientTurnID.Value } } });
-            return;
-        }
-        SetHandInteractable(interactable, action);
-    }
-    [ClientRpc] private void SetHandInteractableClientRpc(bool interactable, TAction action, ClientRpcParams clientRpcParams) => SetHandInteractable(interactable, action);
-
-    protected void SetHandInteractable(bool interactable, TAction? action = null)
-    {
-        foreach (ulong cardId in handCardIds)
-        {
-            PlayingCard card = PlayingCard.GetPlayingCardFromNetworkID(cardId);
-            if (card) card.Interactable.SetInteractable(interactable);
-        }
-
-        if (interactable && action.HasValue) SubscribeHandTo(GetCardOnInteractEvent(action.Value));
-        if (!interactable && action.HasValue) UnsubscribeHandFrom(GetCardOnInteractEvent(action.Value));
-    }
-
-    #endregion
-
     #region Subscribing Specific Cards
 
-    protected void SubscribeCardTo(ulong cardId, EventHandler<InteractEventArgs> onInteract) 
+    public void SubscribeCardTo(PlayingCard card, EventHandler<InteractEventArgs> onInteract) 
     { 
-        PlayingCard card = PlayingCard.GetPlayingCardFromNetworkID(cardId); 
-        if (card) 
+        if (card != null) 
         { 
-            card.Interactable.OnInteract += onInteract; 
+            card.Interactable.OnInteract += onInteract;
             if (eventSubscriptionDictionary.TryGetValue(onInteract, out List<PlayingCard> cards)) 
             { 
                 eventSubscriptionDictionary[onInteract].Add(card);
@@ -386,13 +302,16 @@ public abstract class TablePlayer<TPlayer, TAction, TAI> : NetworkBehaviour
             { 
                 eventSubscriptionDictionary.Add(onInteract, new List<PlayingCard>() { card }); 
             } 
-        } 
+        }
+        else
+        {
+            ConsoleLog.Instance.Log("Cannot find card to subscribe event to");
+        }
     }
 
-    protected void UnsubscribeCardFrom(ulong cardId, EventHandler<InteractEventArgs> onInteract)
+    public void UnsubscribeCardFrom(PlayingCard card, EventHandler<InteractEventArgs> onInteract)
     {
-        PlayingCard card = PlayingCard.GetPlayingCardFromNetworkID(cardId);
-        if (card)
+        if (card != null)
         {
             card.Interactable.OnInteract -= onInteract;
             if (eventSubscriptionDictionary.TryGetValue(onInteract, out List<PlayingCard> cards))
@@ -403,23 +322,45 @@ public abstract class TablePlayer<TPlayer, TAction, TAI> : NetworkBehaviour
         }
     }
 
+    public void UnsubscribeCard(PlayingCard card)
+    {
+        if (card == null)
+            return;
+
+        var handlersToRemove = new List<EventHandler<InteractEventArgs>>();
+
+        // Find all handlers that reference this card
+        foreach (var kvp in eventSubscriptionDictionary)
+        {
+            if (kvp.Value.Contains(card))
+            {
+                card.Interactable.OnInteract -= kvp.Key;
+                kvp.Value.Remove(card);
+
+                // If that handler has no more cards, mark it for removal
+                if (kvp.Value.Count == 0)
+                    handlersToRemove.Add(kvp.Key);
+            }
+        }
+
+        // Clean up empty handler entries
+        foreach (var handler in handlersToRemove)
+        {
+            eventSubscriptionDictionary.Remove(handler);
+        }
+    }
+
     #endregion
 
     #region Subscribing Hand
 
-    protected void SubscribeHandTo(EventHandler<InteractEventArgs> onInteract)
+    public void SubscribeHandTo(EventHandler<InteractEventArgs> onInteract)
     {
-        foreach (ulong cardId in handCardIds)
-        {
-            SubscribeCardTo(cardId, onInteract);
-        }
+        foreach (var card in Hand.Cards) SubscribeCardTo(card, onInteract);
     }
-    protected void UnsubscribeHandFrom(EventHandler<InteractEventArgs> onInteract)
+    public void UnsubscribeHandFrom(EventHandler<InteractEventArgs> onInteract)
     {
-        foreach (ulong cardId in handCardIds)
-        {
-            UnsubscribeCardFrom(cardId, onInteract);
-        }
+        foreach (var card in Hand.Cards) UnsubscribeCardFrom(card, onInteract);
     }
 
     #endregion

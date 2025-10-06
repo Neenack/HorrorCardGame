@@ -93,7 +93,17 @@ public class Interactable : NetworkBehaviour, IInteractable
             return;
         }
 
+        InteractServerRpc(playerID);
+
         OnInteract?.Invoke(this, new InteractEventArgs(playerID));
+    }
+
+    [ServerRpc(RequireOwnership = false)]
+    private void InteractServerRpc(ulong playerID)
+    {
+
+        PlayerData data = PlayerManager.Instance.GetPlayerDataById(playerID);
+        ConsoleLog.Instance.Log($"{data.GetName()} has interacted with {gameObject.name}");
     }
 
     /// <summary>

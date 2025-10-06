@@ -77,6 +77,8 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
     protected List<PlayingCard> cardPile = new List<PlayingCard>();
     protected PlayingCard drawnCard;
 
+    private TableInteractionManager<TPlayer, TAction, TAI> interactionManager;
+
 
     private const float CARD_HEIGHT_Y = 0.0025f;
 
@@ -89,6 +91,7 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
     public IInteractable InteractableDeck => interactableDeck;
     public IEnumerable<TPlayer> Players => activePlayers;
 
+    public TableInteractionManager<TPlayer, TAction, TAI> InteractionManager => interactionManager;
 
     #endregion
 
@@ -104,6 +107,7 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
     private void Awake()
     {
         interactableDeck = GetComponentInChildren<IInteractable>();
+        interactionManager = GetComponent<TableInteractionManager<TPlayer, TAction, TAI>>();
         deck = new CardDeck(deckSO);
     }
 
@@ -305,6 +309,8 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
         /// </summary>
     public void ExecuteAction(ulong playerID, TAction action)
     {
+        ConsoleLog.Instance.Log("START ACTION EXECUTE");
+
         if (IsServer)
         {
             ServerExecuteAction(playerID, action);
@@ -313,7 +319,7 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
 
         if (CanOnlyPlayInTurn() && currentOwnerClientTurnId.Value != playerID)
         {
-            Debug.LogWarning("[Client] It is not your turn to execute an action!");
+            ConsoleLog.Instance.Log("It is not your turn to execute an action!");
             return;
         }
 
@@ -325,9 +331,11 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
 
     private void ServerExecuteAction(ulong playerID, TAction action)
     {
+        ConsoleLog.Instance.Log("SERVER EXECUTE ACTION");
+
         if (CanOnlyPlayInTurn() && currentOwnerClientTurnId.Value != playerID)
         {
-            Debug.LogWarning($"[Server] Player {playerID} tried to execute an action out of turn!");
+            ConsoleLog.Instance.Log($"Player {playerID} tried to execute an action out of turn!");
             return;
         }
 
@@ -404,7 +412,7 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
     {
         if (!IsServer) return;
 
-        foreach (var player in activePlayers) player.RequestSetCardInteractable(card.NetworkObjectId, false);
+        foreach (var player in activePlayers) InteractionManager.RequestSetCardInteraction(card.NetworkObjectId, false);
 
         StartCoroutine(PlaceCardOnPileCoroutine(card, placeFaceDown, lerpSpeed));
     }

@@ -69,6 +69,7 @@ GameObject:
   - component: {fileID: 952294206459774246}
   - component: {fileID: 3370088753089617180}
   - component: {fileID: 4117870373912163582}
+  - component: {fileID: 7788288783198371528}
   - component: {fileID: 1992658521127795146}
   m_Layer: 0
   m_Name: CambioGame
@@ -111,7 +112,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.NetworkObject
-  GlobalObjectIdHash: 1831294727
+  GlobalObjectIdHash: 1920820293
   InScenePlacedSourceGlobalObjectIdHash: 0
   DeferredDespawnTick: 0
   Ownership: 1
@@ -168,6 +169,18 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TableSeater
   ShowTopMostFoldoutHeaderGroup: 1
+--- !u!114 &7788288783198371528
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8663835632188559158}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 427669e36f9610a44993c1129f46a04a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TableInteractionManager
 --- !u!114 &1992658521127795146
 MonoBehaviour:
   m_ObjectHideFlags: 0
