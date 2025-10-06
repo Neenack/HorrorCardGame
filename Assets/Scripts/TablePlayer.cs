@@ -58,7 +58,6 @@ public abstract class TablePlayer<TPlayer, TAction, TAI> : NetworkBehaviour
     public abstract bool IsPlaying();
     public abstract int GetScore();
     protected abstract TAI CreateAI();
-    protected abstract EventHandler<InteractEventArgs> GetCardOnInteractEvent(TAction data);
 
     #endregion
 

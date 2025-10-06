@@ -84,7 +84,7 @@ public class CambioPlayer : TablePlayer<CambioPlayer, CambioActionData, CambioPl
 
         callCambioButton.gameObject.SetActive(true);
 
-        EnableStartTurnInteraction();
+        EnableCallCambioInteraction();
     }
 
     protected override void EndPlayerTurn()
@@ -94,7 +94,7 @@ public class CambioPlayer : TablePlayer<CambioPlayer, CambioActionData, CambioPl
         callCambioButton.gameObject.SetActive(false);
         skipAbilityButton.gameObject.SetActive(false);
 
-        DisableStartTurnInteraction();
+        DisableCallCambioInteraction();
     }
 
     /// <summary>
@@ -112,45 +112,17 @@ public class CambioPlayer : TablePlayer<CambioPlayer, CambioActionData, CambioPl
 
     #region Interaction
 
-    #region Interact Event Switch
-
-    /// <summary>
-    /// When given action data, will subscribe players hand to different actions locally
-    /// </summary>
-    protected override EventHandler<InteractEventArgs> GetCardOnInteractEvent(CambioActionData data)
-    {
-        switch (data.Type)
-        {
-            case CambioActionType.Draw:
-                return Card_OnInteract_AfterDraw;
-
-            case CambioActionType.RevealCard:
-                return Card_OnInteract_RevealCard;
-            case CambioActionType.SwapHand:
-                return Card_OnInteract_SwapHand;
-
-            case CambioActionType.SelectCard:
-                return Card_OnInteract_ChooseCard;
-            case CambioActionType.CompareCards:
-                return Card_OnInteract_CompareCards;
-
-            case CambioActionType.Stack:
-                return Card_OnInteract_Stack;
-            case CambioActionType.GiveCard:
-                return Card_OnInteract_CorrectStack;
-
-        }
-
-        return null;
-    }
-
-    #endregion
-
     #region Start Of Turn Interaction
 
+    private void InteractableDeck_OnInteract(object sender, Interactable.InteractEventArgs e)
+    {
+        DisableCallCambioInteraction();
+
+        Game.ExecuteAction(e.playerID, new CambioActionData(CambioActionType.Draw, false, TablePlayerID));
+    }
     private void CallCambioButton_OnInteract(object sender, Interactable.InteractEventArgs e)
     {
-        DisableStartTurnInteraction();
+        DisableCallCambioInteraction();
 
         Game.ExecuteAction(e.playerID, new CambioActionData(CambioActionType.CallCambio, true, TablePlayerID));
     }
@@ -163,27 +135,16 @@ public class CambioPlayer : TablePlayer<CambioPlayer, CambioActionData, CambioPl
         NotifyCallCambioClientRpc();
     }
 
-    [ClientRpc]
-    private void NotifyCallCambioClientRpc()
-    {
-        calledCambioText.gameObject.SetActive(true);
-    }
+    [ClientRpc] private void NotifyCallCambioClientRpc() => calledCambioText.gameObject.SetActive(true);
 
-    private void InteractableDeck_OnInteract(object sender, Interactable.InteractEventArgs e)
-    {
-        DisableStartTurnInteraction();
-
-        Game.ExecuteAction(e.playerID, new CambioActionData(CambioActionType.Draw, false, TablePlayerID));
-    }
-
-    private void EnableStartTurnInteraction()
+    private void EnableCallCambioInteraction()
     {
         callCambioButton.OnInteract += CallCambioButton_OnInteract;
         Game.InteractableDeck.OnInteract += InteractableDeck_OnInteract;
         Game.InteractableDeck.SetInteractable(true);
     }
 
-    private void DisableStartTurnInteraction()
+    private void DisableCallCambioInteraction()
     {
         callCambioButton.OnInteract -= CallCambioButton_OnInteract;
         Game.InteractableDeck.OnInteract -= InteractableDeck_OnInteract;
@@ -192,36 +153,6 @@ public class CambioPlayer : TablePlayer<CambioPlayer, CambioActionData, CambioPl
     }
 
     #endregion
-
-    #region After Card Draw Interaction
-
-    private void Card_OnInteract_AfterDraw(object sender, InteractEventArgs e)
-    {
-        PlayingCard drawnCard = PlayingCard.GetPlayingCardFromNetworkID(Game.DrawnCardID.Value);
-        drawnCard.Interactable.SetInteractable(false);
-        UnsubscribeCardFrom(drawnCard, Card_OnInteract_AfterDraw);
-
-        PlayingCard chosenCard = (sender as Interactable).GetComponent<PlayingCard>();
-
-        if (chosenCard == null)
-        {
-            Debug.LogWarning("Could not find chosen card");
-            return;
-        }
-
-        if (HandCardIDs.Contains(chosenCard.NetworkObjectId)) //Chose one of your own cards so trade
-        {
-            Game.ExecuteAction(e.playerID, new CambioActionData(CambioActionType.TradeCard, true, TablePlayerID, chosenCard.NetworkObjectId, TablePlayerID, Game.DrawnCardID.Value));
-        }
-        else //Chose the drawn card so discard
-        {
-            Game.ExecuteAction(e.playerID, new CambioActionData(CambioActionType.Discard, true, TablePlayerID, Game.DrawnCardID.Value));
-        }
-    }
-
-    #endregion
-
-    #region Ability Interaction
 
     #region Start Ability
 
@@ -270,63 +201,6 @@ public class CambioPlayer : TablePlayer<CambioPlayer, CambioActionData, CambioPl
 
     #endregion
 
-    #region Ability Events
-
-    #region Reveal Card
-
-    private void Card_OnInteract_RevealCard(object sender, InteractEventArgs e)
-    {
-        DisableSkipAbilityInteraction();
-
-        ulong cardNetworkId = (sender as Interactable).GetComponent<PlayingCard>().NetworkObjectId;
-        ulong playerWithCardId = Game.GetPlayerWithCard(cardNetworkId).TablePlayerID;
-
-        Game.ExecuteAction(e.playerID, new CambioActionData(CambioActionType.RevealCard, true, Game.CurrentPlayerTurnID.Value, 0, playerWithCardId, cardNetworkId));
-    }
-
-    #endregion
-
-    #region Swap Hand
-
-    private void Card_OnInteract_SwapHand(object sender, InteractEventArgs e)
-    {
-        DisableSkipAbilityInteraction();
-
-        ulong cardNetworkId = (sender as Interactable).GetComponent<PlayingCard>().NetworkObjectId;
-        ulong playerWithCardId = Game.GetPlayerWithCard(cardNetworkId).TablePlayerID;
-
-        Game.ExecuteAction(e.playerID, new CambioActionData(CambioActionType.SwapHand, true, Game.CurrentPlayerTurnID.Value, 0, playerWithCardId, 0));
-    }
-
-    #endregion
-
-    #region Swap Cards
-
-    private void Card_OnInteract_ChooseCard(object sender, InteractEventArgs e)
-    {
-        ulong cardNetworkId = (sender as Interactable).GetComponent<PlayingCard>().NetworkObjectId;
-        Game.ExecuteAction(e.playerID, new CambioActionData(CambioActionType.SelectCard, false, Game.CurrentPlayerTurnID.Value, 0, 0, cardNetworkId));
-    }
-
-    #endregion
-
-    #region Compare Cards
-
-    private void Card_OnInteract_CompareCards(object sender, InteractEventArgs e)
-    {
-        DisableSkipAbilityInteraction();
-
-        ulong cardNetworkId = (sender as Interactable).GetComponent<PlayingCard>().NetworkObjectId;
-
-        Game.ExecuteAction(e.playerID, new CambioActionData(CambioActionType.ChooseCard, true, Game.CurrentPlayerTurnID.Value, 0, 0, cardNetworkId));
-    }
-
-    #endregion
-
-    #endregion
-
-    #endregion
-
     #region Stacking
 
     public void RequestSetStacking(bool interactable)
@@ -350,23 +224,6 @@ public class CambioPlayer : TablePlayer<CambioPlayer, CambioActionData, CambioPl
                 player.SetHandInteractDisplay(new InteractDisplay("", true, "Stack Card", "Try stack a matching card on the pile"));
             }
         }
-    }
-
-    private void Card_OnInteract_Stack(object sender, InteractEventArgs e)
-    {
-        ulong cardNetworkId = (sender as Interactable).GetComponent<PlayingCard>().NetworkObjectId;
-
-        PlayerData data = PlayerManager.Instance.GetPlayerDataById(e.playerID);
-        CambioPlayer playerWithStacked = Game.GetPlayerFromData(data);
-
-        Game.ExecuteAction(playerWithStacked.TablePlayerID, new CambioActionData(CambioActionType.Stack, false, playerWithStacked.TablePlayerID, 0, 0, cardNetworkId));
-    }
-
-    private void Card_OnInteract_CorrectStack(object sender, InteractEventArgs e)
-    {
-        ulong cardNetworkId = (sender as Interactable).GetComponent<PlayingCard>().NetworkObjectId;
-
-        Game.ExecuteAction(TablePlayerID, new CambioActionData(CambioActionType.GiveCard, false, TablePlayerID, 0, 0, cardNetworkId));
     }
 
     #endregion

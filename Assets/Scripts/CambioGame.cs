@@ -493,8 +493,7 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
                 {
                     if (player == currentPlayer) continue;
 
-                    TablePlayerSendParams sendParams = new TablePlayerSendParams(player.PlayerData.OwnerClientId, player.TablePlayerID);
-                    InteractionManager.RequestSetHandInteraction(sendParams, true, new CambioActionData(CambioActionType.SelectCard, false, currentPlayer.TablePlayerID));
+                    InteractionManager.RequestSetHandInteraction(player.SendParams, true, new CambioActionData(CambioActionType.SelectCard, false, currentPlayer.TablePlayerID));
                 }
             }
         }
