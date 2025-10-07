@@ -31,7 +31,7 @@ public struct CambioActionData : INetworkSerializeByMemcpy
     public ulong TargetPlayerId;
     public ulong TargetCardId;
 
-    public CambioActionData(CambioActionType type, bool endsTurn, ulong playerId, ulong cardNetworkId = 0, ulong targetPlayerId = 0, ulong targetCardNetworkId = 0)
+    public CambioActionData(CambioActionType type, bool endsTurn = false, ulong playerId = 0, ulong cardNetworkId = 0, ulong targetPlayerId = 0, ulong targetCardNetworkId = 0)
     {
         Type = type;
         EndsTurn = endsTurn;

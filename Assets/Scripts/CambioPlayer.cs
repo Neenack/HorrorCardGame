@@ -201,33 +201,6 @@ public class CambioPlayer : TablePlayer<CambioPlayer, CambioActionData, CambioPl
 
     #endregion
 
-    #region Stacking
-
-    public void RequestSetStacking(bool interactable)
-    {
-        if (IsServer)
-        {
-            SetStackingClientRpc(interactable);
-            return;
-        }
-
-        SetStacking(interactable);
-    }
-    [ClientRpc] private void SetStackingClientRpc(bool interactable) => SetStacking(interactable);
-
-    private void SetStacking(bool interactable)
-    {
-        foreach (var player in Game.Players)
-        {
-            foreach (var cardId in player.HandCardIDs)
-            {
-                player.SetHandInteractDisplay(new InteractDisplay("", true, "Stack Card", "Try stack a matching card on the pile"));
-            }
-        }
-    }
-
-    #endregion
-
     #endregion
 
     #region Card Values

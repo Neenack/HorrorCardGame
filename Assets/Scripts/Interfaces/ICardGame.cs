@@ -23,12 +23,14 @@ public interface ICardGame<TPlayer, TAction, TAI> : ICardGameEvents
     IInteractable InteractableDeck { get; }
     NetworkVariable<ulong> PileCardID { get; }
     NetworkVariable<ulong> DrawnCardID { get; }
-    NetworkVariable<ulong> CurrentPlayerTurnID { get; }
-    NetworkVariable<ulong> CurrentOwnerClientTurnID { get; }
+    NetworkVariable<ulong> CurrentPlayerTurnTableID { get; }
 
     void ExecuteAction(ulong playerID, TAction action);
 
     TPlayer GetPlayerWithCard(ulong cardNetworkId);
     TPlayer GetPlayerFromData(PlayerData data);
+    TPlayer GetPlayerFromTablePlayerID(ulong tableID);
+    TPlayer GetPlayerFromClientID(ulong localClientID);
+    TPlayer GetCurrentTurnPlayer();
 
 }

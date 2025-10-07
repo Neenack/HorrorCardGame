@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using Unity.Multiplayer.Playmode;
 using Unity.Netcode;
 using UnityEngine;
 public enum GameState
@@ -23,13 +24,7 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
     public event Action OnAnyCardDrawn;
     public event Action OnAnyCardPlacedOnPile;
 
-    protected NetworkVariable<ulong> currentPlayerTurnId = new NetworkVariable<ulong>(
-        ulong.MaxValue,
-        NetworkVariableReadPermission.Everyone,
-        NetworkVariableWritePermission.Server
-    );
-
-    protected NetworkVariable<ulong> currentOwnerClientTurnId = new NetworkVariable<ulong>(
+    protected NetworkVariable<ulong> currentPlayerTurnTableId = new NetworkVariable<ulong>(
         ulong.MaxValue,
         NetworkVariableReadPermission.Everyone,
         NetworkVariableWritePermission.Server
@@ -84,8 +79,7 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
 
     #region Public Accessors
 
-    public NetworkVariable<ulong> CurrentPlayerTurnID => currentPlayerTurnId;
-    public NetworkVariable<ulong> CurrentOwnerClientTurnID => currentOwnerClientTurnId;
+    public NetworkVariable<ulong> CurrentPlayerTurnTableID => currentPlayerTurnTableId;
     public NetworkVariable<ulong> PileCardID => topPileCardId;
     public NetworkVariable<ulong> DrawnCardID => drawnCardId;
     public IInteractable InteractableDeck => interactableDeck;
@@ -236,7 +230,7 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
         topPileCardId.Value = 0;
 
         currentPlayer = null;
-        currentPlayerTurnId.Value = ulong.MaxValue;
+        currentPlayerTurnTableId.Value = ulong.MaxValue;
 
         interactableDeck.ResetDisplay();
         interactableDeck.SetInteractMode(InteractMode.Host);
@@ -272,13 +266,10 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
             yield break;
         }
 
-        //Set owner client id so only the given client will recieve the input
-        currentOwnerClientTurnId.Value = currentPlayer.PlayerData == null ? OwnerClientId : currentPlayer.PlayerData.OwnerClientId;
-
         yield return new WaitForSeconds(1f);
 
         //change the turn id
-        currentPlayerTurnId.Value = currentPlayer.TablePlayerID;
+        currentPlayerTurnTableId.Value = currentPlayer.TablePlayerID;
 
         if (currentPlayer.IsAI)
         {
@@ -291,20 +282,6 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
         }
     }
 
-
-    /// <summary>
-    /// Disables and unsubscribes from every active playing card
-    /// </summary>
-    protected void DisableAllCardsAndUnsubscribe()
-    {
-        foreach (var player in activePlayers)
-        {
-            player.ResetHandInteractableDisplay();
-        }
-
-        InteractionManager.ResetAllInteractions();
-    }
-
     #region Requesting Actions
 
         /// <summary>
@@ -312,15 +289,21 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
         /// </summary>
     public void ExecuteAction(ulong playerID, TAction action)
     {
-        ConsoleLog.Instance.Log("START ACTION EXECUTE");
-
         if (IsServer)
         {
             ServerExecuteAction(playerID, action);
             return;
         }
 
-        if (CanOnlyPlayInTurn() && currentOwnerClientTurnId.Value != playerID)
+        TPlayer playerTurn = GetPlayerFromTablePlayerID(currentPlayerTurnTableId.Value);
+
+        if (playerTurn == null)
+        {
+            ConsoleLog.Instance.Log("No current player assigned!");
+            return;
+        }
+
+        if (CanOnlyPlayInTurn() && playerTurn?.PlayerData.OwnerClientId != playerID)
         {
             ConsoleLog.Instance.Log("It is not your turn to execute an action!");
             return;
@@ -334,16 +317,20 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
 
     private void ServerExecuteAction(ulong playerID, TAction action)
     {
-        ConsoleLog.Instance.Log("SERVER EXECUTE ACTION");
+        if (currentPlayer == null)
+        {
+            ConsoleLog.Instance.Log("No current player assigned!");
+            return;
+        }
 
-        if (CanOnlyPlayInTurn() && currentOwnerClientTurnId.Value != playerID)
+        if (CanOnlyPlayInTurn() && currentPlayer?.PlayerData.OwnerClientId != playerID)
         {
             ConsoleLog.Instance.Log($"Player {playerID} tried to execute an action out of turn!");
             return;
         }
 
         //Disables all previous interactions with cards before executing a new action
-        DisableAllCardsAndUnsubscribe();
+        InteractionManager.ResetAllInteractions();
         StartCoroutine(ExecuteActionRoutine(action));
     }
 
@@ -638,6 +625,18 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
             if (player.HandCardIDs.Contains(cardNetworkId)) return player;
         }
         return null;
+    }
+
+
+
+    /// <summary>
+    /// Gets the player whos turn it is
+    /// </summary>
+    public TPlayer GetCurrentTurnPlayer()
+    {
+        if (IsServer) return currentPlayer;
+
+        return GetPlayerFromTablePlayerID(currentPlayerTurnTableId.Value);
     }
 
     #endregion

@@ -79,7 +79,7 @@ public abstract class TablePlayer<TPlayer, TAction, TAI> : NetworkBehaviour
 
         if (game != null)
         {
-            game.CurrentPlayerTurnID.OnValueChanged -= OnTurnChanged;
+            game.CurrentPlayerTurnTableID.OnValueChanged -= OnTurnChanged;
             game.OnGameStarted -= Game_OnServerGameStarted;
             game.OnGameEnded -= Game_OnServerGameEnded;
             game.OnAnyActionExecuted -= Game_OnServerActionExecuted;
@@ -157,7 +157,7 @@ public abstract class TablePlayer<TPlayer, TAction, TAI> : NetworkBehaviour
             EndPlayerTurn();
         }
 
-        if (newValue == TablePlayerID && game.CurrentOwnerClientTurnID.Value == NetworkManager.Singleton.LocalClientId)
+        if (newValue == TablePlayerID && game.GetCurrentTurnPlayer().PlayerData.OwnerClientId == NetworkManager.Singleton.LocalClientId)
         {
             StartPlayerTurn();
         }
@@ -165,7 +165,7 @@ public abstract class TablePlayer<TPlayer, TAction, TAI> : NetworkBehaviour
 
     protected virtual void Game_OnServerGameStarted()
     {
-        game.CurrentPlayerTurnID.OnValueChanged += OnTurnChanged;
+        game.CurrentPlayerTurnTableID.OnValueChanged += OnTurnChanged;
         game.OnGameEnded += Game_OnServerGameEnded;
         game.OnAnyActionExecuted += Game_OnServerActionExecuted;
 
@@ -176,7 +176,7 @@ public abstract class TablePlayer<TPlayer, TAction, TAI> : NetworkBehaviour
 
     protected virtual void Game_OnServerGameEnded()
     {
-        game.CurrentPlayerTurnID.OnValueChanged -= OnTurnChanged;
+        game.CurrentPlayerTurnTableID.OnValueChanged -= OnTurnChanged;
         game.OnGameEnded -= Game_OnServerGameEnded;
         game.OnAnyActionExecuted -= Game_OnServerActionExecuted;
 
@@ -277,18 +277,13 @@ public abstract class TablePlayer<TPlayer, TAction, TAI> : NetworkBehaviour
         }
     }
 
-    /// <summary>
-    /// Called to reset the interactable display for all cards in the hand
-    /// </summary>
-    public void ResetHandInteractableDisplay()
-    {
-        foreach (var card in Hand.Cards) card.Interactable.ResetDisplay();
-    }
-
     #region Player Interaction
 
     #region Subscribing Specific Cards
 
+    /// <summary>
+    /// Subscribes a playing card to a given event
+    /// </summary>
     public void SubscribeCardTo(PlayingCard card, EventHandler<InteractEventArgs> onInteract) 
     { 
         if (card != null) 
@@ -298,17 +293,14 @@ public abstract class TablePlayer<TPlayer, TAction, TAI> : NetworkBehaviour
             { 
                 eventSubscriptionDictionary[onInteract].Add(card);
             } 
-            else 
-            { 
-                eventSubscriptionDictionary.Add(onInteract, new List<PlayingCard>() { card }); 
-            } 
+            else eventSubscriptionDictionary.Add(onInteract, new List<PlayingCard>() { card }); 
         }
-        else
-        {
-            ConsoleLog.Instance.Log("Cannot find card to subscribe event to");
-        }
+        else ConsoleLog.Instance.Log("Cannot find card to subscribe event to");
     }
 
+    /// <summary>
+    /// Unsubscribes a playing card from a given event
+    /// </summary>
     public void UnsubscribeCardFrom(PlayingCard card, EventHandler<InteractEventArgs> onInteract)
     {
         if (card != null)
@@ -320,8 +312,12 @@ public abstract class TablePlayer<TPlayer, TAction, TAI> : NetworkBehaviour
                 if (cards.Count <= 0) eventSubscriptionDictionary.Remove(onInteract);
             }
         }
+        else ConsoleLog.Instance.Log("Cannot find card to unsubscribe from");
     }
 
+    /// <summary>
+    /// Unsubscribes a playing card from all events
+    /// </summary>
     public void UnsubscribeCard(PlayingCard card)
     {
         if (card == null)
@@ -354,10 +350,17 @@ public abstract class TablePlayer<TPlayer, TAction, TAI> : NetworkBehaviour
 
     #region Subscribing Hand
 
+    /// <summary>
+    /// Subscribes the whole player hand to a given event
+    /// </summary>
     public void SubscribeHandTo(EventHandler<InteractEventArgs> onInteract)
     {
         foreach (var card in Hand.Cards) SubscribeCardTo(card, onInteract);
     }
+
+    /// <summary>
+    /// Unsubscribes a whole player hand from a given event
+    /// </summary>
     public void UnsubscribeHandFrom(EventHandler<InteractEventArgs> onInteract)
     {
         foreach (var card in Hand.Cards) UnsubscribeCardFrom(card, onInteract);
@@ -472,20 +475,6 @@ public abstract class TablePlayer<TPlayer, TAction, TAI> : NetworkBehaviour
         float angle = (cardIndex - (totalCards - 1) / 2f) * angleStep;
 
         return transform.rotation * Quaternion.Euler(180f, angle, 0f);
-    }
-
-    #endregion
-
-    #region Card Interaction Display
-
-    /// <summary>
-    /// Sets the interact display for the whole hand
-    /// </summary>
-    public void SetHandInteractDisplay(InteractDisplay display)
-    {
-        if (!IsServer) return;
-
-        foreach (var card in Hand.Cards) card.Interactable.SetDisplay(display);
     }
 
     #endregion

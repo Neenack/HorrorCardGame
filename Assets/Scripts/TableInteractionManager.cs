@@ -2,7 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Unity.Netcode;
+using UnityEngine.XR;
 using static Interactable;
+using static UnityEngine.Rendering.DebugUI;
 
 
 public abstract class TableInteractionManager<TPlayer, TAction, TAI> : NetworkBehaviour
@@ -11,55 +13,26 @@ public abstract class TableInteractionManager<TPlayer, TAction, TAI> : NetworkBe
     where TAI : PlayerAI<TPlayer, TAction, TAI>
 {
 
-    private CardGame<TPlayer, TAction, TAI> game;
+    private ICardGame<TPlayer, TAction, TAI> game;
+    protected ICardGame<TPlayer, TAction, TAI> Game => game;
 
-    protected TPlayer GetPlayerFromTableID(ulong TableID) => Game.GetPlayerFromTablePlayerID(TableID);
+
+
+    protected InteractDisplay nullDisplay = new InteractDisplay("N/A", true, "Error", "Display not found :)");
+
+
+    #region Abstract Functions
+
     protected abstract EventHandler<InteractEventArgs> GetCardOnInteractEvent(TAction action);
+    protected abstract InteractDisplay GetInteractDisplay(TAction action);
 
-    protected CardGame<TPlayer, TAction, TAI> Game => game;
+    #endregion
 
 
     private void Awake()
     {
         game = GetComponent<CardGame<TPlayer, TAction, TAI>>();
     }
-
-
-    //SHOULD ONLY BE CALLED ON THE PLAYER CLIENT THAT HAS THE INTERACTION
-    //E.G PLAYER 2 CHOOSING TO DISCARD A CARD, THIS CODE SHOULD ONLY BE RUN ON PLAYER 2'S CLIENT
-    private void SetCardInteraction(TablePlayerSendParams playerSendParams, ulong cardNetworkID, bool interactable, TAction? action = null)
-    {
-        PlayingCard cardToInteract = PlayingCard.GetPlayingCardFromNetworkID(cardNetworkID);
-        TPlayer tablePlayer = GetPlayerFromTableID(playerSendParams.TablePlayerID);
-
-        if (cardToInteract == null)
-        {
-            ConsoleLog.Instance.Log($"SetCardInteraction failed: invalid card with ID: {cardNetworkID}");
-            return;
-        }
-
-        if (tablePlayer == null)
-        {
-            ConsoleLog.Instance.Log($"SetCardInteraction failed: invalid player reference for table ID {playerSendParams.TablePlayerID}");
-            return;
-        }
-
-        cardToInteract.Interactable.SetInteractable(interactable);
-
-        if (action.HasValue) //Action was provided
-        {
-            EventHandler<InteractEventArgs> eventHandler = GetCardOnInteractEvent(action.Value);
-
-            if (interactable)
-                tablePlayer.SubscribeCardTo(cardToInteract, eventHandler);
-            else
-                tablePlayer.UnsubscribeCardFrom(cardToInteract, eventHandler);
-        }
-        else if (!interactable) tablePlayer.UnsubscribeCard(cardToInteract); //Not interactable and no action
-
-        ConsoleLog.Instance.Log($"[Client {NetworkManager.Singleton.LocalClientId}] {cardToInteract.ToString()} {(interactable ? "enabled" : "disabled")} for {tablePlayer.GetName()} [ID:{playerSendParams.TablePlayerID}] [Client: {playerSendParams.LocalClientID}]");
-    }
-
 
     #region Set Card Interactable
 
@@ -76,6 +49,8 @@ public abstract class TableInteractionManager<TPlayer, TAction, TAI> : NetworkBe
 
         foreach (var player in game.Players)
         {
+            if (player.IsAI) continue;
+
             RequestSetCardInteraction(player.SendParams, cardNetworkID, interactable, action);
         }
     }
@@ -87,6 +62,12 @@ public abstract class TableInteractionManager<TPlayer, TAction, TAI> : NetworkBe
     {
         if (IsServer)
         {
+            if (interactable && action.HasValue)
+            {
+                PlayingCard card = PlayingCard.GetPlayingCardFromNetworkID(cardNetworkID);
+                SetCardInteractDisplay(card, GetInteractDisplay(action.Value));
+            }
+
             ClientRpcParams clientRpcParams = new ClientRpcParams
             {
                 Send = new ClientRpcSendParams
@@ -127,6 +108,42 @@ public abstract class TableInteractionManager<TPlayer, TAction, TAI> : NetworkBe
         SetCardInteraction(playerSendParams, cardNetworkID, interactable);
     }
 
+
+    //SHOULD ONLY BE CALLED ON THE PLAYER CLIENT THAT HAS THE INTERACTION
+    //E.G PLAYER 2 CHOOSING TO DISCARD A CARD, THIS CODE SHOULD ONLY BE RUN ON PLAYER 2'S CLIENT
+    private void SetCardInteraction(TablePlayerSendParams playerSendParams, ulong cardNetworkID, bool interactable, TAction? action = null)
+    {
+        PlayingCard cardToInteract = PlayingCard.GetPlayingCardFromNetworkID(cardNetworkID);
+        TPlayer tablePlayer = Game.GetPlayerFromTablePlayerID(playerSendParams.TablePlayerID);
+
+        if (cardToInteract == null)
+        {
+            ConsoleLog.Instance.Log($"SetCardInteraction failed: invalid card with ID: {cardNetworkID}");
+            return;
+        }
+
+        if (tablePlayer == null)
+        {
+            ConsoleLog.Instance.Log($"SetCardInteraction failed: invalid player reference for table ID {playerSendParams.TablePlayerID}");
+            return;
+        }
+
+        cardToInteract.Interactable.SetInteractable(interactable);
+
+        if (action.HasValue) //Action was provided
+        {
+            EventHandler<InteractEventArgs> eventHandler = GetCardOnInteractEvent(action.Value);
+
+            if (interactable)
+                tablePlayer.SubscribeCardTo(cardToInteract, eventHandler);
+            else
+                tablePlayer.UnsubscribeCardFrom(cardToInteract, eventHandler);
+        }
+        else if (!interactable) tablePlayer.UnsubscribeCard(cardToInteract); //Not interactable and no action
+
+        ConsoleLog.Instance.Log($"[Client {NetworkManager.Singleton.LocalClientId}] {cardToInteract.ToString()} {(interactable ? "enabled" : "disabled")} for {tablePlayer.GetName()} [ID:{playerSendParams.TablePlayerID}] [Client: {playerSendParams.LocalClientID}]");
+    }
+
     #endregion
 
     #region Set Hand Interactable
@@ -155,6 +172,12 @@ public abstract class TableInteractionManager<TPlayer, TAction, TAI> : NetworkBe
     {
         if (IsServer)
         {
+            if (interactable && action.HasValue) 
+            {
+                TPlayer player = Game.GetPlayerFromTablePlayerID(playerSendParams.TablePlayerID);
+                SetHandInteractDisplay(player, GetInteractDisplay(action.Value));
+            }
+
             ClientRpcParams rpcParams = new ClientRpcParams
             {
                 Send = new ClientRpcSendParams
@@ -181,7 +204,7 @@ public abstract class TableInteractionManager<TPlayer, TAction, TAI> : NetworkBe
         if (NetworkManager.Singleton.LocalClientId != playerSendParams.LocalClientID)
             return;
 
-        TablePlayer<TPlayer, TAction, TAI> tablePlayer = GetPlayerFromTableID(playerSendParams.TablePlayerID);
+        TablePlayer<TPlayer, TAction, TAI> tablePlayer = Game.GetPlayerFromTablePlayerID(playerSendParams.TablePlayerID);
 
         foreach (var card in tablePlayer.Hand.Cards) SetCardInteraction(playerSendParams, card.NetworkObjectId, interactable, action);
     }
@@ -193,18 +216,51 @@ public abstract class TableInteractionManager<TPlayer, TAction, TAI> : NetworkBe
         if (NetworkManager.Singleton.LocalClientId != playerSendParams.LocalClientID)
             return;
 
-        TablePlayer<TPlayer, TAction, TAI> tablePlayer = GetPlayerFromTableID(playerSendParams.TablePlayerID);
+        TablePlayer<TPlayer, TAction, TAI> tablePlayer = Game.GetPlayerFromTablePlayerID(playerSendParams.TablePlayerID);
 
         foreach (var card in tablePlayer.Hand.Cards) SetCardInteraction(playerSendParams, card.NetworkObjectId, interactable);
     }
 
     #endregion
 
+    #region Reset Interactions
+
     public void ResetAllInteractions()
     {
         foreach (var player in game.Players)
         {
             player.DisableAllCardsAndUnsubscribeClientRpc();
+            ResetHandInteractableDisplay(player);
         }
     }
+
+    #endregion
+
+    #region Interaction Display
+
+    /// <summary>
+    /// Sets the interact display for the given card
+    /// </summary>
+    protected void SetCardInteractDisplay(PlayingCard card, InteractDisplay display)
+    {
+        card.Interactable.SetDisplay(display);
+    }
+
+    /// <summary>
+    /// Sets the interact display for the whole player hand
+    /// </summary>
+    protected void SetHandInteractDisplay(TPlayer player, InteractDisplay display)
+    {
+        foreach (var card in player.Hand.Cards) card.Interactable.SetDisplay(display);
+    }
+
+    /// <summary>
+    /// Called to reset the interactable display for all cards in the players hand
+    /// </summary>
+    public void ResetHandInteractableDisplay(TPlayer player)
+    {
+        foreach (var card in player.Hand.Cards) card.Interactable.ResetDisplay();
+    }
+
+    #endregion
 }
