@@ -53,7 +53,7 @@ public class PlayerInteractor : NetworkBehaviour
         {
             if (heldObj == null && currentTarget != null)
             {
-                currentTarget.Interact(OwnerClientId);
+                currentTarget.Interact();
             }
         }
 

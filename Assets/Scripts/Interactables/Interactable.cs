@@ -14,8 +14,8 @@ public class Interactable : NetworkBehaviour, IInteractable
 
     public class InteractEventArgs : EventArgs
     {
-        public ulong playerID;
-        public InteractEventArgs(ulong playerID) { this.playerID = playerID; }
+        public ulong ClientID;
+        public InteractEventArgs(ulong playerID) { this.ClientID = playerID; }
     }
 
     [SerializeField] private bool canInteract = true;
@@ -80,29 +80,25 @@ public class Interactable : NetworkBehaviour, IInteractable
     /// <summary>
     /// Called when a player interacts, invokes an event
     /// </summary>
-    public void Interact(ulong playerID)
+    public void Interact()
     {
-        if (playerID != NetworkManager.Singleton.LocalClientId)
-        {
-            return;
-        }
-
         // Client-side validation for immediate feedback
         if (!CanInteract())
         {
             return;
         }
 
-        InteractServerRpc(playerID);
+        ulong clientID = NetworkManager.Singleton.LocalClientId;
 
-        OnInteract?.Invoke(this, new InteractEventArgs(playerID));
+        InteractServerRpc(clientID);
+        OnInteract?.Invoke(this, new InteractEventArgs(clientID));
     }
 
     [ServerRpc(RequireOwnership = false)]
-    private void InteractServerRpc(ulong playerID)
+    private void InteractServerRpc(ulong clientID)
     {
 
-        PlayerData data = PlayerManager.Instance.GetPlayerDataById(playerID);
+        PlayerData data = PlayerManager.Instance.GetPlayerDataById(clientID);
         ConsoleLog.Instance.Log($"{data.GetName()} has interacted with {gameObject.name}");
     }
 

@@ -13,6 +13,9 @@ public class ServerRelay : MonoSingleton<ServerRelay>
     private string joinCode = "";
     public string JoinCode => joinCode.ToUpper();
 
+    private bool isClientConnecting = false;
+    public bool IsClientConnecting => isClientConnecting;
+
     public async Task<string> TryCreateRelay()
     {
         try
@@ -39,16 +42,26 @@ public class ServerRelay : MonoSingleton<ServerRelay>
 
     public async void TryJoinRelay(string joinCode)
     {
+        isClientConnecting = true;
         try
         {
             JoinAllocation joinAllocation = await RelayService.Instance.JoinAllocationAsync(joinCode);
             RelayServerData relayServerData = AllocationUtils.ToRelayServerData(joinAllocation, "dtls");
             NetworkManager.Singleton.GetComponent<UnityTransport>().SetRelayServerData(relayServerData);
             NetworkManager.Singleton.StartClient();
+                
+            while (!NetworkManager.Singleton.IsClient || !NetworkManager.Singleton.IsConnectedClient)
+            {
+                await Task.Yield();
+            }
         }
         catch (RelayServiceException e)
         {
             Debug.Log(e);
+        }
+        finally
+        {
+            isClientConnecting = false;
         }
     }
 }

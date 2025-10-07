@@ -3,12 +3,12 @@ using UnityEngine;
 
 public struct TablePlayerSendParams : INetworkSerializeByMemcpy
 {
-    public ulong ClientID;
+    public ulong LocalClientID;
     public ulong TablePlayerID;
 
     public TablePlayerSendParams(ulong ownerClientId, ulong tablePlayerId)
     {
-        ClientID = ownerClientId;
+        LocalClientID = ownerClientId;
         TablePlayerID = tablePlayerId;
     }
 }

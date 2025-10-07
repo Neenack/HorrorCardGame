@@ -118,13 +118,13 @@ public class CambioPlayer : TablePlayer<CambioPlayer, CambioActionData, CambioPl
     {
         DisableCallCambioInteraction();
 
-        Game.ExecuteAction(e.playerID, new CambioActionData(CambioActionType.Draw, false, TablePlayerID));
+        Game.ExecuteAction(e.ClientID, new CambioActionData(CambioActionType.Draw, false, TablePlayerID));
     }
     private void CallCambioButton_OnInteract(object sender, Interactable.InteractEventArgs e)
     {
         DisableCallCambioInteraction();
 
-        Game.ExecuteAction(e.playerID, new CambioActionData(CambioActionType.CallCambio, true, TablePlayerID));
+        Game.ExecuteAction(e.ClientID, new CambioActionData(CambioActionType.CallCambio, true, TablePlayerID));
     }
 
     //Called by the server
@@ -196,7 +196,7 @@ public class CambioPlayer : TablePlayer<CambioPlayer, CambioActionData, CambioPl
     {
         DisableSkipAbilityInteraction();
 
-        Game.ExecuteAction(e.playerID, new CambioActionData(CambioActionType.None, true, TablePlayerID));
+        Game.ExecuteAction(e.ClientID, new CambioActionData(CambioActionType.None, true, TablePlayerID));
     }
 
     #endregion

@@ -12,14 +12,8 @@ public abstract class TableInteractionManager<TPlayer, TAction, TAI> : NetworkBe
 {
 
     private CardGame<TPlayer, TAction, TAI> game;
-    protected TPlayer GetPlayerFromTableID(ulong TableID)
-    {
-        foreach (var player in game.Players)
-        {
-            if (player.TablePlayerID == TableID) return player;
-        }
-        return null;
-    }
+
+    protected TPlayer GetPlayerFromTableID(ulong TableID) => Game.GetPlayerFromTablePlayerID(TableID);
     protected abstract EventHandler<InteractEventArgs> GetCardOnInteractEvent(TAction action);
 
     protected CardGame<TPlayer, TAction, TAI> Game => game;
@@ -36,17 +30,23 @@ public abstract class TableInteractionManager<TPlayer, TAction, TAI> : NetworkBe
     private void SetCardInteraction(TablePlayerSendParams playerSendParams, ulong cardNetworkID, bool interactable, TAction? action = null)
     {
         PlayingCard cardToInteract = PlayingCard.GetPlayingCardFromNetworkID(cardNetworkID);
-        TablePlayer<TPlayer, TAction, TAI> tablePlayer = GetPlayerFromTableID(playerSendParams.TablePlayerID);
+        TPlayer tablePlayer = GetPlayerFromTableID(playerSendParams.TablePlayerID);
 
-        if (cardToInteract == null || tablePlayer == null)
+        if (cardToInteract == null)
         {
-            ConsoleLog.Instance.Log("SetCardInteraction failed: invalid card or player reference.");
+            ConsoleLog.Instance.Log($"SetCardInteraction failed: invalid card with ID: {cardNetworkID}");
+            return;
+        }
+
+        if (tablePlayer == null)
+        {
+            ConsoleLog.Instance.Log($"SetCardInteraction failed: invalid player reference for table ID {playerSendParams.TablePlayerID}");
             return;
         }
 
         cardToInteract.Interactable.SetInteractable(interactable);
 
-        if (action.HasValue)
+        if (action.HasValue) //Action was provided
         {
             EventHandler<InteractEventArgs> eventHandler = GetCardOnInteractEvent(action.Value);
 
@@ -55,12 +55,9 @@ public abstract class TableInteractionManager<TPlayer, TAction, TAI> : NetworkBe
             else
                 tablePlayer.UnsubscribeCardFrom(cardToInteract, eventHandler);
         }
-        else
-        {
-            if (!interactable) tablePlayer.UnsubscribeCard(cardToInteract);
-        }
+        else if (!interactable) tablePlayer.UnsubscribeCard(cardToInteract); //Not interactable and no action
 
-        ConsoleLog.Instance.Log($"[Client {NetworkManager.Singleton.LocalClientId}] {cardToInteract.ToString()} {(interactable ? "enabled" : "disabled")} for {tablePlayer.GetName()} [ID:{playerSendParams.TablePlayerID}]");
+        ConsoleLog.Instance.Log($"[Client {NetworkManager.Singleton.LocalClientId}] {cardToInteract.ToString()} {(interactable ? "enabled" : "disabled")} for {tablePlayer.GetName()} [ID:{playerSendParams.TablePlayerID}] [Client: {playerSendParams.LocalClientID}]");
     }
 
 
@@ -79,11 +76,7 @@ public abstract class TableInteractionManager<TPlayer, TAction, TAI> : NetworkBe
 
         foreach (var player in game.Players)
         {
-            TablePlayerSendParams sendParams = new TablePlayerSendParams();
-            sendParams.ClientID = player.PlayerData != null ? player.PlayerData.OwnerClientId : OwnerClientId;
-            sendParams.TablePlayerID = player.TablePlayerID;
-
-            RequestSetCardInteraction(sendParams, cardNetworkID, interactable, action);
+            RequestSetCardInteraction(player.SendParams, cardNetworkID, interactable, action);
         }
     }
 
@@ -98,7 +91,7 @@ public abstract class TableInteractionManager<TPlayer, TAction, TAI> : NetworkBe
             {
                 Send = new ClientRpcSendParams
                 {
-                    TargetClientIds = new ulong[] { playerSendParams.ClientID }
+                    TargetClientIds = new ulong[] { playerSendParams.LocalClientID }
                 }
             };
 
@@ -118,7 +111,7 @@ public abstract class TableInteractionManager<TPlayer, TAction, TAI> : NetworkBe
     private void SetCardInteractionClientRpc(TablePlayerSendParams playerSendParams, ulong cardNetworkID, bool interactable, TAction action, ClientRpcParams rpcParams = default)
     {
         // Only execute on correct client
-        if (NetworkManager.Singleton.LocalClientId != playerSendParams.ClientID)
+        if (NetworkManager.Singleton.LocalClientId != playerSendParams.LocalClientID)
             return;
 
         SetCardInteraction(playerSendParams, cardNetworkID, interactable, action);
@@ -128,7 +121,7 @@ public abstract class TableInteractionManager<TPlayer, TAction, TAI> : NetworkBe
     private void SetCardInteractionClientRpc(TablePlayerSendParams playerSendParams, ulong cardNetworkID, bool interactable, ClientRpcParams rpcParams = default)
     {
         // Only execute on correct client
-        if (NetworkManager.Singleton.LocalClientId != playerSendParams.ClientID)
+        if (NetworkManager.Singleton.LocalClientId != playerSendParams.LocalClientID)
             return;
 
         SetCardInteraction(playerSendParams, cardNetworkID, interactable);
@@ -166,7 +159,7 @@ public abstract class TableInteractionManager<TPlayer, TAction, TAI> : NetworkBe
             {
                 Send = new ClientRpcSendParams
                 {
-                    TargetClientIds = new ulong[] { playerSendParams.ClientID }
+                    TargetClientIds = new ulong[] { playerSendParams.LocalClientID }
                 }
             };
 
@@ -185,7 +178,7 @@ public abstract class TableInteractionManager<TPlayer, TAction, TAI> : NetworkBe
     private void SetHandInteractionClientRpc(TablePlayerSendParams playerSendParams, bool interactable, TAction action, ClientRpcParams rpcParams = default)
     {
         // Only execute on correct client
-        if (NetworkManager.Singleton.LocalClientId != playerSendParams.ClientID)
+        if (NetworkManager.Singleton.LocalClientId != playerSendParams.LocalClientID)
             return;
 
         TablePlayer<TPlayer, TAction, TAI> tablePlayer = GetPlayerFromTableID(playerSendParams.TablePlayerID);
@@ -197,7 +190,7 @@ public abstract class TableInteractionManager<TPlayer, TAction, TAI> : NetworkBe
     private void SetHandInteractionClientRpc(TablePlayerSendParams playerSendParams, bool interactable, ClientRpcParams rpcParams = default)
     {
         // Only execute on correct client
-        if (NetworkManager.Singleton.LocalClientId != playerSendParams.ClientID)
+        if (NetworkManager.Singleton.LocalClientId != playerSendParams.LocalClientID)
             return;
 
         TablePlayer<TPlayer, TAction, TAI> tablePlayer = GetPlayerFromTableID(playerSendParams.TablePlayerID);

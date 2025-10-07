@@ -155,7 +155,9 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
         if (gameState.Value != GameState.WaitingToStart) return;
 
         fillBots = GamemodeSettings.Instance.UseAI;
-        interactableDeck.SetInteractable(fillBots || PlayerManager.Instance.PlayerCount > 1);
+        bool clientConnecting = ServerRelay.Instance.IsClientConnecting;
+
+        interactableDeck.SetInteractable((fillBots || PlayerManager.Instance.PlayerCount > 1) && !clientConnecting);
     }
 
     #endregion
@@ -297,9 +299,10 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
     {
         foreach (var player in activePlayers)
         {
-            player.DisableAllCardsAndUnsubscribeClientRpc();
             player.ResetHandInteractableDisplay();
         }
+
+        InteractionManager.ResetAllInteractions();
     }
 
     #region Requesting Actions
@@ -593,14 +596,14 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
     /// <summary>
     /// Gets the player from the owner client ID
     /// </summary>
-    protected TPlayer GetPlayerFromClientID(ulong clientID) => GetPlayerFromData(PlayerManager.Instance.GetPlayerDataById(clientID));
+    public TPlayer GetPlayerFromClientID(ulong clientID) => GetPlayerFromData(PlayerManager.Instance.GetPlayerDataById(clientID));
 
 
 
     /// <summary>
     /// Gets the player from their table ID
     /// </summary>
-    protected TPlayer GetPlayerFromPlayerID(ulong playerID)
+    public TPlayer GetPlayerFromTablePlayerID(ulong playerID)
     {
         foreach (var player in tablePlayers) if (player?.TablePlayerID == playerID) return player;
         return null;

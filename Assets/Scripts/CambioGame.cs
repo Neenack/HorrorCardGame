@@ -281,7 +281,7 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
     [ClientRpc]
     private void ShowScoreClientRpc(ulong playerId, int score)
     {
-        GetPlayerFromPlayerID(playerId)?.ShowScore(score);
+        GetPlayerFromTablePlayerID(playerId)?.ShowScore(score);
     }
 
     #endregion
@@ -295,9 +295,9 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
 
         ConsoleLog.Instance.Log($"{currentPlayer.GetName()} has executed Action: " + action.Type);
 
-        CambioPlayer player = GetPlayerFromPlayerID(action.PlayerId);
+        CambioPlayer player = GetPlayerFromTablePlayerID(action.PlayerId);
         PlayingCard playerCard = PlayingCard.GetPlayingCardFromNetworkID(action.CardId);
-        CambioPlayer targetPlayer = GetPlayerFromPlayerID(action.TargetPlayerId);
+        CambioPlayer targetPlayer = GetPlayerFromTablePlayerID(action.TargetPlayerId);
         PlayingCard targetCard = PlayingCard.GetPlayingCardFromNetworkID(action.TargetCardId);
 
         switch (action.Type)
