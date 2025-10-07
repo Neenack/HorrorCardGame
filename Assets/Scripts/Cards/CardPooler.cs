@@ -112,8 +112,9 @@ public class CardPooler : NetworkSingleton<CardPooler>
 
         card.gameObject.SetActive(false);
 
-        UpdateCardTransformClientRpc(card.NetworkObjectId, card.transform.position, false);
+        UpdateCardTransformClientRpc(card.NetworkObjectId, card.transform.rotation, card.transform.position, false);
     }
+
 
     /// <summary>
     /// Get a card from the pool
@@ -143,22 +144,23 @@ public class CardPooler : NetworkSingleton<CardPooler>
         activeCards.Add(card);
 
         card.transform.position = position;
+        card.transform.rotation = Quaternion.Euler(180f, 0, 0);
         card.gameObject.SetActive(true);
 
-        UpdateCardTransformClientRpc(card.NetworkObjectId, position, true);
+        UpdateCardTransformClientRpc(card.NetworkObjectId, Quaternion.Euler(180f, 0, 0), position, true);
 
         return card;
     }
 
     [ClientRpc]
-    private void UpdateCardTransformClientRpc(ulong cardId, Vector3 position, bool isActive)
+    private void UpdateCardTransformClientRpc(ulong cardId, Quaternion rotation, Vector3 position, bool isActive)
     {
-        if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(cardId, out var obj))
-        {
-            var card = obj.GetComponent<PlayingCard>();
-            card.transform.position = position;
-            card.gameObject.SetActive(isActive);
-        }
+        PlayingCard card = PlayingCard.GetPlayingCardFromNetworkID(cardId);
+
+        card.transform.position = position;
+        card.transform.rotation = rotation;
+
+        card.gameObject.SetActive(isActive);
     }
 
     /// <summary>
