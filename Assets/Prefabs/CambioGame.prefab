@@ -112,7 +112,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.NetworkObject
-  GlobalObjectIdHash: 1920820293
+  GlobalObjectIdHash: 1831294727
   InScenePlacedSourceGlobalObjectIdHash: 0
   DeferredDespawnTick: 0
   Ownership: 1
@@ -148,7 +148,7 @@ MonoBehaviour:
   cardSpawnTransform: {fileID: 2309378037893428197}
   cardPileTransform: {fileID: 1593651811556556494}
   fillBots: 1
-  AIThinkingTime: 0.2
+  AIThinkingTime: 1
   cardViewingTime: 3
   cardPullPositionOffset: {x: 0, y: 0.5, z: 0}
   cardLiftHeight: 0.1

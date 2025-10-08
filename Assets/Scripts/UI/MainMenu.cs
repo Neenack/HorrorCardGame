@@ -2,12 +2,22 @@ using UnityEngine;
 
 public class MainMenu : MonoBehaviour
 {
+    bool cursorLocked = true;
+
     void Update()
     {
         if (Input.GetKeyDown(KeyCode.Escape))
         {
-            Cursor.lockState = CursorLockMode.None;
-            Cursor.visible = true;
+            if (cursorLocked)
+            {
+                Cursor.visible = true;
+                cursorLocked = false;
+            }
+            else
+            {
+                Cursor.visible = false;
+                cursorLocked = true;
+            }
         }
     }
 }

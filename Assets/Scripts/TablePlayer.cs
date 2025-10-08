@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Unity.Multiplayer.Playmode;
 using Unity.Netcode;
 using Unity.VisualScripting;
 using UnityEngine;
@@ -49,7 +50,7 @@ public abstract class TablePlayer<TPlayer, TAction, TAI> : NetworkBehaviour
     public TAI PlayerAI => playerAI;
     public ulong TablePlayerID => tablePlayerId.Value;
     public Transform PlayerStandTransform => playerStandTransform;
-    public TablePlayerSendParams SendParams => new TablePlayerSendParams(PlayerData ? PlayerData.OwnerClientId : OwnerClientId, tablePlayerId.Value);
+    public ulong LocalClientID => PlayerData ? PlayerData.OwnerClientId : OwnerClientId;
 
     #endregion
 
@@ -77,14 +78,7 @@ public abstract class TablePlayer<TPlayer, TAction, TAI> : NetworkBehaviour
         if (hand != null) hand.OnHandUpdated -= Hand_OnHandUpdated;
         if (handCardIds != null) handCardIds.OnListChanged -= OnHandCardIdsChanged;
 
-        if (game != null)
-        {
-            game.CurrentPlayerTurnTableID.OnValueChanged -= OnTurnChanged;
-            game.OnGameStarted -= Game_OnServerGameStarted;
-            game.OnGameEnded -= Game_OnServerGameEnded;
-            game.OnAnyActionExecuted -= Game_OnServerActionExecuted;
-        }
-
+        UnsubscribeFromGame();
         UnsubscribeAll();
     }
 
@@ -99,7 +93,7 @@ public abstract class TablePlayer<TPlayer, TAction, TAI> : NetworkBehaviour
     /// <summary>
     /// Sets the player data for the table player
     /// </summary>
-    public void SetPlayer(PlayerData data)
+    public virtual void SetPlayer(PlayerData data)
     {
         playerData = data;
     }
@@ -111,12 +105,33 @@ public abstract class TablePlayer<TPlayer, TAction, TAI> : NetworkBehaviour
     /// </summary>
     public void SetGame(ICardGame<TPlayer, TAction, TAI> game)
     {
-        if (this.game != null && game != this.game) game.OnGameStarted -= Game_OnServerGameStarted;
+        UnsubscribeFromGame();
 
         this.game = game;
 
-        this.game.OnGameStarted -= Game_OnServerGameStarted;
-        this.game.OnGameStarted += Game_OnServerGameStarted;
+        SubscribeToGame();
+    }
+
+    private void SubscribeToGame()
+    {
+        if (game == null) return;
+
+        game.CurrentGameState.OnValueChanged += OnGameStateChanged;
+        game.CurrentPlayerTurnTableID.OnValueChanged += OnTurnChanged;
+        game.PileCardID.OnValueChanged += OnPileCardChanged;
+        game.OnAnyActionExecuted += Game_OnServerActionExecuted;
+        game.OnGameReset += Game_OnGameReset;
+    }
+
+    private void UnsubscribeFromGame()
+    {
+        if (game == null) return;
+
+        game.CurrentGameState.OnValueChanged -= OnGameStateChanged;
+        game.CurrentPlayerTurnTableID.OnValueChanged -= OnTurnChanged;
+        game.PileCardID.OnValueChanged -= OnPileCardChanged;
+        game.OnAnyActionExecuted -= Game_OnServerActionExecuted;
+        game.OnGameReset -= Game_OnGameReset;
     }
 
 
@@ -141,7 +156,25 @@ public abstract class TablePlayer<TPlayer, TAction, TAI> : NetworkBehaviour
     [ServerRpc(RequireOwnership = false)] private void ClearHandServerRpc() => handCardIds.Clear();
 
 
-    #region Player Starting and Ending Turn Logic
+    #region Game Subscriptions
+
+    /// <summary>
+    /// Called when the game state changes
+    /// </summary>
+    private void OnGameStateChanged(GameState previousValue, GameState newValue)
+    {
+        // Handle client-side game state changes
+        switch (newValue)
+        {
+            case GameState.Starting:
+                Game_OnServerGameStarted();
+                break;
+
+            case GameState.Ending:
+                Game_OnServerGameEnded();
+                break;
+        }
+    }
 
     /// <summary>
     /// Called when the turn changes for the game
@@ -150,7 +183,7 @@ public abstract class TablePlayer<TPlayer, TAction, TAI> : NetworkBehaviour
     {
         if (IsAI) return;
 
-        DisableHandAndUnsubscribe();
+        UnsubscribeAll();
 
         if (oldValue == TablePlayerID && isTurn)
         {
@@ -163,12 +196,16 @@ public abstract class TablePlayer<TPlayer, TAction, TAI> : NetworkBehaviour
         }
     }
 
+    /// <summary>
+    /// Called when the pile card changes (new card is added to pile)
+    /// </summary>
+    protected virtual void OnPileCardChanged(ulong previousCard, ulong newCard)
+    {
+
+    }
+
     protected virtual void Game_OnServerGameStarted()
     {
-        game.CurrentPlayerTurnTableID.OnValueChanged += OnTurnChanged;
-        game.OnGameEnded += Game_OnServerGameEnded;
-        game.OnAnyActionExecuted += Game_OnServerActionExecuted;
-
         CreateAI();
 
         Game_OnGameStartedClientRpc();
@@ -176,11 +213,12 @@ public abstract class TablePlayer<TPlayer, TAction, TAI> : NetworkBehaviour
 
     protected virtual void Game_OnServerGameEnded()
     {
-        game.CurrentPlayerTurnTableID.OnValueChanged -= OnTurnChanged;
-        game.OnGameEnded -= Game_OnServerGameEnded;
-        game.OnAnyActionExecuted -= Game_OnServerActionExecuted;
-
         Game_OnGameEndedClientRpc();
+    }
+
+    protected virtual void Game_OnGameReset()
+    {
+        ResetHand();
     }
     protected virtual void Game_OnServerActionExecuted() 
     {
@@ -210,28 +248,9 @@ public abstract class TablePlayer<TPlayer, TAction, TAI> : NetworkBehaviour
     #endregion
 
     /// <summary>
-    /// Disables all playing cards, unsubscribes from all known subscriptions and resets interact display
-    /// </summary>
-    protected void DisableHandAndUnsubscribe()
-    {
-        //Disable all cards in hand
-        foreach (var card in Hand.Cards)
-        {
-            card.Interactable.SetInteractable(false);
-        }
-
-        UnsubscribeAll();
-    }
-
-    /// <summary>
-    /// Disables all playing cards, unsubscribes from all known subscriptions and resets interact display
-    /// </summary>
-    [ClientRpc] public void DisableAllCardsAndUnsubscribeClientRpc() => DisableHandAndUnsubscribe();
-
-    /// <summary>
     /// Unsubscribes from all known subscriptions
     /// </summary>
-    protected void UnsubscribeAll()
+    public void UnsubscribeAll()
     {
         if (eventSubscriptionDictionary.Count > 0)
         {

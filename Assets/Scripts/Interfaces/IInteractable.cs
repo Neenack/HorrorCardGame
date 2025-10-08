@@ -28,11 +28,15 @@ public interface IInteractable
 {
     public event EventHandler<InteractEventArgs> OnInteract;
 
-    public bool CanInteract();
-    public void SetInteractable(bool interact);
-    public void SetInteractMode(InteractMode mode);
+    public bool CanInteract(ulong LocalClientID);
     public void Interact();
+    public void SetInteractable(bool interactable);
 
+
+    public void SetAllowedClients(params ulong[] clients);
+    public void AddAllowedClient(ulong clientId);
+    public void RemoveAllowedClient(ulong clientId);
+    public void ClearAllowedClients();
 
 
     public InteractDisplay GetDisplay();

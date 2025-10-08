@@ -10,7 +10,7 @@ public enum GameState
     WaitingToStart,
     Starting,
     Playing,
-    Ended
+    Ending
 }
 
 public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardGame<TPlayer, TAction, TAI>, ITable
@@ -18,13 +18,18 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
     where TAction : struct
     where TAI : PlayerAI<TPlayer, TAction, TAI>
 {
-    public event Action OnGameStarted;
-    public event Action OnGameEnded;
+    public event Action OnGameReset;
     public event Action OnAnyActionExecuted;
     public event Action OnAnyCardDrawn;
     public event Action OnAnyCardPlacedOnPile;
 
     protected NetworkVariable<ulong> currentPlayerTurnTableId = new NetworkVariable<ulong>(
+        ulong.MaxValue,
+        NetworkVariableReadPermission.Everyone,
+        NetworkVariableWritePermission.Server
+    );
+
+    protected NetworkVariable<ulong> currentPlayerTurnClientId = new NetworkVariable<ulong>(
         ulong.MaxValue,
         NetworkVariableReadPermission.Everyone,
         NetworkVariableWritePermission.Server
@@ -79,11 +84,18 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
 
     #region Public Accessors
 
+    public NetworkVariable<GameState> CurrentGameState => gameState;
     public NetworkVariable<ulong> CurrentPlayerTurnTableID => currentPlayerTurnTableId;
+    public NetworkVariable<ulong> CurrentPlayerTurnClientID => currentPlayerTurnClientId;
     public NetworkVariable<ulong> PileCardID => topPileCardId;
     public NetworkVariable<ulong> DrawnCardID => drawnCardId;
     public IInteractable InteractableDeck => interactableDeck;
     public IEnumerable<TPlayer> Players => activePlayers;
+    public bool IsAI(ulong tableID)
+    {
+        TPlayer player = GetPlayerFromTablePlayerID(tableID);
+        return player == null ? true : player.IsAI;
+    }
 
     public TableInteractionManager<TPlayer, TAction, TAI> InteractionManager => interactionManager;
 
@@ -114,48 +126,12 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
                 interactableDeck.OnInteract += InteractableDeck_OnInteract;
             }
         }
-
-        gameState.OnValueChanged += OnGameStateChanged;
     }
 
     public override void OnNetworkDespawn()
     {
         if (interactableDeck != null) interactableDeck.OnInteract -= InteractableDeck_OnInteract;
-
-        gameState.OnValueChanged -= OnGameStateChanged;
     }
-
-
-    private void OnGameStateChanged(GameState previousValue, GameState newValue)
-    {
-        // Handle client-side game state changes
-        switch (newValue)
-        {
-            case GameState.Starting:
-                interactableDeck.SetInteractable(false);
-                OnGameStarted?.Invoke();
-                break;
-
-            case GameState.Ended:
-                OnGameEnded?.Invoke();
-                break;
-        }
-    }
-
-    #region Update
-
-    private void Update()
-    {
-        if (gameState.Value != GameState.WaitingToStart) return;
-
-        fillBots = GamemodeSettings.Instance.UseAI;
-        bool clientConnecting = ServerRelay.Instance.IsClientConnecting;
-
-        interactableDeck.SetInteractable((fillBots || PlayerManager.Instance.PlayerCount > 1) && !clientConnecting);
-    }
-
-    #endregion
-
 
     #region Start Logic
 
@@ -199,10 +175,6 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
 
         gameState.Value = GameState.Playing;
 
-        //Allow deck interact
-        interactableDeck.SetInteractMode(InteractMode.All);
-        interactableDeck.SetDisplay(new InteractDisplay("Pull Card"));
-
         NextTurn();
     }
 
@@ -216,7 +188,7 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
     {
         ConsoleLog.Instance.Log("Game Finished!");
 
-        gameState.Value = GameState.Ended;
+        gameState.Value = GameState.Ending;
 
         ResetGame();
 
@@ -225,17 +197,14 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
 
     private void ResetGame()
     {
+        OnGameReset?.Invoke();
+
         currentTurnIndex = -1;
         cardPile.Clear();
         topPileCardId.Value = 0;
 
         currentPlayer = null;
         currentPlayerTurnTableId.Value = ulong.MaxValue;
-
-        interactableDeck.ResetDisplay();
-        interactableDeck.SetInteractMode(InteractMode.Host);
-
-        foreach (var player in activePlayers) player.ResetHand();
 
         CardPooler.Instance.ReturnAllActiveCards();
     }
@@ -268,13 +237,14 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
 
         yield return new WaitForSeconds(1f);
 
-        //change the turn id
+        //change the turn ids
+        currentPlayerTurnClientId.Value = currentPlayer.LocalClientID;
         currentPlayerTurnTableId.Value = currentPlayer.TablePlayerID;
 
         if (currentPlayer.IsAI)
         {
             ConsoleLog.Instance.Log($"{currentPlayer.GetName()} (AI) turn!");
-            StartCoroutine(HandleAITurn());
+            HandleAITurn();
         }
         else
         {
@@ -346,8 +316,6 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
         if (!IsServer) yield break;
 
         OnAnyActionExecuted?.Invoke();
-
-        yield return new WaitForSeconds(currentPlayer.IsAI ? AIThinkingTime : 0);
     }
 
     #endregion
@@ -398,7 +366,7 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
     {
         if (!IsServer) return;
 
-        foreach (var player in activePlayers) InteractionManager.RequestSetCardInteraction(card.NetworkObjectId, false);
+        InteractionManager.SetCardInteraction(card, false);
 
         StartCoroutine(PlaceCardOnPileCoroutine(card, placeFaceDown, lerpSpeed));
     }
@@ -547,9 +515,8 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
     /// <summary>
     /// Coroutine to execute the start turn action for the AI
     /// </summary>
-    private IEnumerator HandleAITurn()
+    private void HandleAITurn()
     {
-        yield return new WaitForSeconds(AIThinkingTime);
         StartCoroutine(ExecuteActionRoutine(currentPlayer.PlayerAI.DecideAction(TurnContext.StartTurn)));
     }
 
@@ -558,8 +525,6 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
     /// </summary>
     protected IEnumerator HandleAIDrawDecision()
     {
-        yield return new WaitForSeconds(AIThinkingTime);
-
         TAction action = currentPlayer.PlayerAI.DecideAction(TurnContext.AfterDraw);
         yield return StartCoroutine(ExecuteActionRoutine(action));
     }

@@ -67,8 +67,16 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
         //Set last turn if someone has called cambio
         if (currentPlayer) currentPlayer.hasPlayedLastTurn.Value = Players.Any(p => !p.IsPlaying());
 
+
         //Stacking
-        if (cardStacking && cardPile.Count > 0) yield return StartCoroutine(StackingRoutine());
+        if (cardStacking && cardPile.Count > 0)
+        {
+            //Ends player turn before stacking phase
+            currentPlayerTurnClientId.Value = ulong.MaxValue;
+            currentPlayerTurnTableId.Value = ulong.MaxValue;
+
+            yield return StartCoroutine(StackingRoutine());
+        }
 
         StartCoroutine(base.NextTurnRoutine());
     }
@@ -198,11 +206,9 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
         //Enable interaction for player or handle decision for AI
         if (!player.IsAI)
         {
-            TablePlayerSendParams sendParams = player.SendParams;
-
             //Set hand and drawn card interactable for the player client, and subscribe them to the event for card drawing
-            InteractionManager.RequestSetHandInteraction(sendParams, true, new CambioActionData(CambioActionType.Draw, false, currentPlayer.TablePlayerID));
-            InteractionManager.RequestSetCardInteraction(sendParams, drawnCard.NetworkObjectId, true, new CambioActionData(CambioActionType.Draw, false, currentPlayer.TablePlayerID, drawnCard.NetworkObjectId));
+            InteractionManager.SetHandInteraction(currentPlayer.Hand.Cards, true, currentPlayer , new CambioActionData(CambioActionType.Draw, false, currentPlayer.TablePlayerID));
+            InteractionManager.SetCardInteraction(drawnCard, true, currentPlayer , new CambioActionData(CambioActionType.Draw, false, currentPlayer.TablePlayerID, drawnCard.NetworkObjectId));
         }
         else StartCoroutine(HandleAIDrawDecision());
     }
@@ -341,10 +347,8 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
                 player.TryAddSeenCard(targetCard);
                 if (!currentPlayer.IsAI)
                 {
-                    TablePlayerSendParams sendParams = currentPlayer.SendParams;
-
-                    InteractionManager.RequestSetCardInteraction(sendParams, playerCard.NetworkObjectId, true, new CambioActionData(CambioActionType.CompareCards, true, currentPlayer.TablePlayerID));
-                    InteractionManager.RequestSetCardInteraction(sendParams, targetCard.NetworkObjectId, true, new CambioActionData(CambioActionType.CompareCards, true, currentPlayer.TablePlayerID));
+                    InteractionManager.SetCardInteraction(playerCard, true, currentPlayer, new CambioActionData(CambioActionType.CompareCards, true, currentPlayer.TablePlayerID));
+                    InteractionManager.SetCardInteraction(targetCard, true, currentPlayer, new CambioActionData(CambioActionType.CompareCards, true, currentPlayer.TablePlayerID));
                 }
                 else
                 {
@@ -388,35 +392,30 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
             return;
         }
 
-        //Does not enable the skip turn button if the card is below 6
-        if (cardValue >= 6 && cardValue != 13) currentPlayer.RequestEnableAbilityStartedInteraction();
-
         switch (cardValue)
         {
             case 6:
             case 7:
-                InteractionManager.RequestSetHandInteraction(currentPlayer.SendParams, true, new CambioActionData(CambioActionType.RevealCard, true, currentPlayer.TablePlayerID));
+                InteractionManager.SetHandInteraction(currentPlayer.Hand, true, currentPlayer, new CambioActionData(CambioActionType.RevealCard));
                 return;
             case 8:
             case 9:
-                InteractionManager.RequestSetHandInteraction(currentPlayer.SendParams, false);
                 foreach (var player in Players)
                 {
-                    if (player == currentPlayer) continue;
-                    InteractionManager.RequestSetHandInteraction(player.SendParams, true, new CambioActionData(CambioActionType.RevealCard, true, currentPlayer.TablePlayerID));
+                    if (player == currentPlayer) InteractionManager.SetHandInteraction(currentPlayer.Hand, false);
+                    else InteractionManager.SetHandInteraction(player.Hand, true, currentPlayer, new CambioActionData(CambioActionType.RevealCard));
                 }
                 return;
             case 10:
-                InteractionManager.RequestSetHandInteraction(currentPlayer.SendParams, false);
                 foreach (var player in Players)
                 {
-                    if (player == currentPlayer) continue;
-                    InteractionManager.RequestSetHandInteraction(player.SendParams, true, new CambioActionData(CambioActionType.SwapHand, true, currentPlayer.TablePlayerID, 0, player.TablePlayerID, 0));
+                    if (player == currentPlayer) InteractionManager.SetHandInteraction(currentPlayer.Hand, false);
+                    else InteractionManager.SetHandInteraction(player.Hand, true, currentPlayer, new CambioActionData(CambioActionType.SwapHand));
                 }
                 return;
             case 11:
             case 12:
-                InteractionManager.RequestSetHandInteraction(currentPlayer.SendParams, true, new CambioActionData(CambioActionType.SelectCard));
+                InteractionManager.SetHandInteraction(currentPlayer.Hand, true, currentPlayer, new CambioActionData(CambioActionType.SelectCard));
                 return;
 
             case 13:
@@ -424,6 +423,8 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
                 return;
         }
 
+
+        //If all checks fail go next turn
         NextTurn();
     }
 
@@ -468,9 +469,8 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
             {
                 foreach (var player in Players)
                 {
-                    if (player == currentPlayer) continue;
-
-                    InteractionManager.RequestSetHandInteraction(player.SendParams, true, new CambioActionData(CambioActionType.SelectCard, false, currentPlayer.TablePlayerID));
+                    if (player == currentPlayer) InteractionManager.SetHandInteraction(currentPlayer.Hand, false);
+                    InteractionManager.SetHandInteraction(player.Hand, true, currentPlayer, new CambioActionData(CambioActionType.SelectCard, false, currentPlayer.TablePlayerID));
                 }
             }
         }
@@ -513,20 +513,24 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
 
     private void OnStackingChanged(bool previousValue, bool newValue)
     {
-        if (newValue) ConsoleLog.Instance.Log("Stacking enabled!");
-        else ConsoleLog.Instance.Log("Stacking disabled!");
+        if (newValue)
+        {
+            ConsoleLog.Instance.Log("Stacking enabled!");
 
-        SetStackingClientRpc(newValue);
-    }
+            foreach (var player in Players)
+            {
+                InteractionManager.SetHandInteraction(player.Hand, true, Players, new CambioActionData(CambioActionType.Stack));
+            }
+        }
+        else
+        {
+            ConsoleLog.Instance.Log("Stacking disabled!");
 
-    /// <summary>
-    /// Enables all hands for each player
-    /// </summary>
-    [ClientRpc]
-    private void SetStackingClientRpc(bool interactable)
-    {
-        if (interactable) InteractionManager.RequestSetHandInteraction(true, new CambioActionData(CambioActionType.Stack));
-        else InteractionManager.RequestSetHandInteraction(false);
+            foreach (var player in Players)
+            {
+                InteractionManager.SetHandInteraction(player.Hand, false, Players);
+            }
+        }
     }
 
 
@@ -580,10 +584,8 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
                 waitingForStackInput = true;
                 playerToRecieveCard = playerWithCard;
 
-                TablePlayerSendParams sendParams = new TablePlayerSendParams(playerWhoStacked.PlayerData.OwnerClientId, playerWhoStacked.TablePlayerID);
-
                 //Player who stacked can give one of their cards to the other player
-                InteractionManager.RequestSetHandInteraction(sendParams, true, new CambioActionData(CambioActionType.GiveCard, false, playerWhoStacked.TablePlayerID));
+                InteractionManager.SetHandInteraction(playerWhoStacked.Hand, true, playerWhoStacked, new CambioActionData(CambioActionType.GiveCard, false, playerWhoStacked.TablePlayerID));
 
                 yield return new WaitUntil(() => waitingForStackInput == false);
             }

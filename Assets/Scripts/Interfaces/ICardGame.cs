@@ -7,11 +7,19 @@ using UnityEngine.InputSystem.XR.Haptics;
 
 public interface ICardGameEvents
 {
-    event Action OnGameStarted;
-    event Action OnGameEnded;
+    event Action OnGameReset;
+
     event Action OnAnyActionExecuted;
     event Action OnAnyCardDrawn;
     event Action OnAnyCardPlacedOnPile;
+
+    NetworkVariable<GameState> CurrentGameState { get; }
+    NetworkVariable<ulong> DrawnCardID { get; }
+    NetworkVariable<ulong> PileCardID { get; }
+    NetworkVariable<ulong> CurrentPlayerTurnTableID { get; }
+    NetworkVariable<ulong> CurrentPlayerTurnClientID { get; }
+
+    bool IsAI(ulong tableID);
 }
 
 public interface ICardGame<TPlayer, TAction, TAI> : ICardGameEvents
@@ -21,9 +29,6 @@ public interface ICardGame<TPlayer, TAction, TAI> : ICardGameEvents
 {
     IEnumerable<TPlayer> Players { get; }
     IInteractable InteractableDeck { get; }
-    NetworkVariable<ulong> PileCardID { get; }
-    NetworkVariable<ulong> DrawnCardID { get; }
-    NetworkVariable<ulong> CurrentPlayerTurnTableID { get; }
 
     void ExecuteAction(ulong playerID, TAction action);
 

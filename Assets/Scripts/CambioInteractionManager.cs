@@ -65,7 +65,7 @@ public class CambioInteractionManager : TableInteractionManager<CambioPlayer, Ca
                 if (pileCard.GetValue(false) == 11)
                     return new InteractDisplay("", true, "Compare Cards", "Select a card to compare");
                 else if (pileCard.GetValue(false) == 12)
-                    new InteractDisplay("", true, "Blind Swap", "Select a card to swap");
+                    return new InteractDisplay("", true, "Blind Swap", "Select a card to swap");
                 return nullDisplay;
 
             case CambioActionType.Stack:
@@ -109,7 +109,7 @@ public class CambioInteractionManager : TableInteractionManager<CambioPlayer, Ca
         PlayingCard drawnCard = PlayingCard.GetPlayingCardFromNetworkID(Game.DrawnCardID.Value);
         CambioPlayer currentPlayer = Game.GetPlayerFromTablePlayerID(Game.CurrentPlayerTurnTableID.Value);
 
-        RequestSetCardInteraction(Game.DrawnCardID.Value, false);
+        SetCardInteraction(drawnCard, false);
 
         PlayingCard chosenCard = (sender as Interactable).GetComponent<PlayingCard>();
 

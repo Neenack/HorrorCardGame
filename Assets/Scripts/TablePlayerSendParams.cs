@@ -1,6 +1,7 @@
 using Unity.Netcode;
 using UnityEngine;
 
+/*
 public struct TablePlayerSendParams : INetworkSerializeByMemcpy
 {
     public ulong LocalClientID;
@@ -12,3 +13,4 @@ public struct TablePlayerSendParams : INetworkSerializeByMemcpy
         TablePlayerID = tablePlayerId;
     }
 }
+*/

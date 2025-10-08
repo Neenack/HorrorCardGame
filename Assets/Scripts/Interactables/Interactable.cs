@@ -1,12 +1,9 @@
 using System;
+using System.Collections.Generic;
 using Unity.Netcode;
+using UnityEditor.PackageManager;
 using UnityEngine;
 
-
-public enum InteractMode
-{
-    All, Host
-}
 
 public class Interactable : NetworkBehaviour, IInteractable
 {
@@ -18,12 +15,9 @@ public class Interactable : NetworkBehaviour, IInteractable
         public InteractEventArgs(ulong playerID) { this.ClientID = playerID; }
     }
 
-    [SerializeField] private bool canInteract = true;
-
-    private NetworkVariable<InteractMode> interactMode;
+    private NetworkList<ulong> allowedClients = new NetworkList<ulong>();
     private NetworkVariable<InteractDisplay> interactableDisplay;
-
-    [SerializeField] private InteractMode defaultInteractMode = InteractMode.All;
+    private bool isInteractable = true;
 
     [Header("Interact Display")]
     [SerializeField] private string interactText = "Interact";
@@ -43,14 +37,8 @@ public class Interactable : NetworkBehaviour, IInteractable
             ),
         NetworkVariableReadPermission.Everyone,
         NetworkVariableWritePermission.Server
-    );
-
-        interactMode = new NetworkVariable<InteractMode>(
-        defaultInteractMode,
-        NetworkVariableReadPermission.Everyone,
-        NetworkVariableWritePermission.Server);
+        );
     }
-
 
     /// <summary>
     /// Returns the text display for interacting
@@ -60,21 +48,15 @@ public class Interactable : NetworkBehaviour, IInteractable
 
 
     /// <summary>
-    /// Checks if a player can interact
+    /// Checks if a certain client can interact
     /// </summary>
-    public bool CanInteract()
-    {
-        switch (interactMode.Value)
-        {
-            case InteractMode.All:
-                return canInteract;
+    public bool CanInteract(ulong LocalClientID) => isInteractable && allowedClients.Contains(LocalClientID);
 
-            case InteractMode.Host:
-                return canInteract && IsServer;
-        }
 
-        return false;
-    }
+    /// <summary>
+    /// Sets the interactable
+    /// </summary>
+    public void SetInteractable(bool interactable) => isInteractable = interactable;
 
 
     /// <summary>
@@ -82,35 +64,75 @@ public class Interactable : NetworkBehaviour, IInteractable
     /// </summary>
     public void Interact()
     {
-        // Client-side validation for immediate feedback
-        if (!CanInteract())
-        {
-            return;
-        }
-
         ulong clientID = NetworkManager.Singleton.LocalClientId;
 
+        // Client-side validation for immediate feedback
+        if (!CanInteract(clientID)) return;
+
         InteractServerRpc(clientID);
+
         OnInteract?.Invoke(this, new InteractEventArgs(clientID));
     }
 
     [ServerRpc(RequireOwnership = false)]
     private void InteractServerRpc(ulong clientID)
     {
-
         PlayerData data = PlayerManager.Instance.GetPlayerDataById(clientID);
         ConsoleLog.Instance.Log($"{data.GetName()} has interacted with {gameObject.name}");
     }
 
     /// <summary>
-    /// Enable or disable interactable
+    /// SERVER ONLY Sets the allowed clients for the interactable
     /// </summary>
-    public void SetInteractable(bool interact)
+    public void SetAllowedClients(params ulong[] clients)
     {
-        canInteract = interact;
+        if (!IsServer) return;
+
+        allowedClients.Clear();
+        foreach (ulong client in clients)
+        {
+            if (allowedClients.Contains(client)) continue;
+            allowedClients.Add(client);
+        }
+
+        Debug.Log($"{gameObject.name} has been set interactable for [{string.Join(", ", clients)}]");
+    }
+
+    /// <summary>
+    /// SERVER ONLY Adds an allowed client for the interactable
+    /// </summary>
+    public void AddAllowedClient(ulong clientId)
+    {
+        if (!IsServer) return;
+        if (!allowedClients.Contains(clientId))
+            allowedClients.Add(clientId);
+
+        Debug.Log($"{gameObject.name} has added client [{clientId}]");
     }
 
 
+    /// <summary>
+    /// SERVER ONLY Removes an allowed client for the interacable
+    /// </summary>
+    public void RemoveAllowedClient(ulong clientId)
+    {
+        if (!IsServer) return;
+        allowedClients.Remove(clientId);
+
+        Debug.Log($"{gameObject.name} has removed client [{clientId}]");
+    }
+
+    /// <summary>
+    /// SERVER ONLY Clears the allowed clients for the interactable
+    /// </summary>
+    public void ClearAllowedClients()
+    {
+        if (!IsServer || allowedClients.Count == 0) return;
+
+        allowedClients.Clear();
+
+        Debug.Log($"{gameObject.name} has cleared clients");
+    }
 
 
     /// <summary>
@@ -120,16 +142,6 @@ public class Interactable : NetworkBehaviour, IInteractable
     {
         interactableDisplay.Value = display;
     }
-
-
-    /// <summary>
-    /// SERVER ONLY Set the interact mode for the interactable
-    /// </summary>
-    public void SetInteractMode(InteractMode mode)
-    {
-        interactMode.Value = mode;
-    }
-
 
     /// <summary>
     /// SERVER ONLY Reset the interact display to default

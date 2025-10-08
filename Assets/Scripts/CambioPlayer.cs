@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using TMPro;
+using Unity.Multiplayer.Playmode;
 using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -28,14 +29,44 @@ public class CambioPlayer : TablePlayer<CambioPlayer, CambioActionData, CambioPl
 
         calledCambioText?.gameObject.SetActive(false);
         scoreText.gameObject.SetActive(false);
-        Invoke("HideAllButtons", 0.2f);
     }
 
-    #region Turn Logic
+    public override void SetPlayer(PlayerData data)
+    {
+        base.SetPlayer(data);
+    }
+
+    /// <summary>
+    /// Returns if the player is still playing
+    /// </summary>
+    public override bool IsPlaying() => !hasPlayedLastTurn.Value;
+
+    public void ShowScore(int score)
+    {
+        scoreText.text = score.ToString();
+        scoreText.gameObject.SetActive(true);
+    }
+
+    //Called by the server
+    public void CallCambio()
+    {
+        hasPlayedLastTurn.Value = true;
+
+        NotifyCallCambioClientRpc();
+    }
+    [ClientRpc] private void NotifyCallCambioClientRpc() => calledCambioText.gameObject.SetActive(true);
+
+    #region Game Subscriptions
 
     protected override void Game_OnServerGameStarted()
     {
         base.Game_OnServerGameStarted();
+
+        if (!IsAI)
+        {
+            callCambioButton.SetAllowedClients(PlayerData.OwnerClientId);
+            skipAbilityButton.SetAllowedClients(PlayerData.OwnerClientId);
+        }
 
         HideAllButtons();
     }
@@ -72,47 +103,39 @@ public class CambioPlayer : TablePlayer<CambioPlayer, CambioActionData, CambioPl
         HideAllButtons();
     }
 
-    public void HideAllButtons()
-    {
-        callCambioButton?.gameObject.SetActive(false);
-        skipAbilityButton?.gameObject.SetActive(false);
-    }
-
     protected override void StartPlayerTurn()
     {
         base.StartPlayerTurn();
 
-        callCambioButton.gameObject.SetActive(true);
-
-        EnableCallCambioInteraction();
+        EnableStartTurnInteraction();
     }
 
     protected override void EndPlayerTurn()
     {
         base.EndPlayerTurn();
 
-        callCambioButton.gameObject.SetActive(false);
-        skipAbilityButton.gameObject.SetActive(false);
-
+        HideAllButtons();
         DisableCallCambioInteraction();
+        DisableSkipAbilityInteraction();
     }
 
     /// <summary>
-    /// Returns if the player is still playing
+    /// Called when the pile card changes (new card is added to pile)
     /// </summary>
-    public override bool IsPlaying() => !hasPlayedLastTurn.Value;
-
-    public void ShowScore(int score)
+    protected override void OnPileCardChanged(ulong previousCard, ulong newCard)
     {
-        scoreText.text = score.ToString();
-        scoreText.gameObject.SetActive(true);
+        if (isTurn) //CARD ADDED TO PILE AND IT THE PLAYERS TURN
+        {
+            PlayingCard card = PlayingCard.GetPlayingCardFromNetworkID(newCard);
+            int value = GetCardValue(card);
+
+            if (value >= 6 && value != 13) EnableSkipAbilityButton();
+        }
     }
 
     #endregion
 
     #region Interaction
-
-    #region Start Of Turn Interaction
 
     private void InteractableDeck_OnInteract(object sender, Interactable.InteractEventArgs e)
     {
@@ -127,71 +150,6 @@ public class CambioPlayer : TablePlayer<CambioPlayer, CambioActionData, CambioPl
         Game.ExecuteAction(e.ClientID, new CambioActionData(CambioActionType.CallCambio, true, TablePlayerID));
     }
 
-    //Called by the server
-    public void CallCambio()
-    {
-        hasPlayedLastTurn.Value = true;
-
-        NotifyCallCambioClientRpc();
-    }
-
-    [ClientRpc] private void NotifyCallCambioClientRpc() => calledCambioText.gameObject.SetActive(true);
-
-    private void EnableCallCambioInteraction()
-    {
-        callCambioButton.OnInteract += CallCambioButton_OnInteract;
-        Game.InteractableDeck.OnInteract += InteractableDeck_OnInteract;
-        Game.InteractableDeck.SetInteractable(true);
-    }
-
-    private void DisableCallCambioInteraction()
-    {
-        callCambioButton.OnInteract -= CallCambioButton_OnInteract;
-        Game.InteractableDeck.OnInteract -= InteractableDeck_OnInteract;
-        Game.InteractableDeck.SetInteractable(false);
-        callCambioButton.gameObject.SetActive(false);
-    }
-
-    #endregion
-
-    #region Start Ability
-
-    /// <summary>
-    /// Requests for the player to enable interactions for starting an ability
-    /// </summary>
-    public void RequestEnableAbilityStartedInteraction()
-    {
-        if (IsServer)
-        {
-            EnableAbilityStartedInteractionClientRpc(PlayerData.OwnerClientId);
-            return;
-        }
-        EnableAbilityStartedInteraction();
-    }
-
-    [ClientRpc]
-    private void EnableAbilityStartedInteractionClientRpc(ulong localClientId)
-    {
-        if (PlayerData == null || localClientId != NetworkManager.Singleton.LocalClientId) return;
-
-        EnableAbilityStartedInteraction();
-    }
-
-    private void EnableAbilityStartedInteraction()
-    {
-        skipAbilityButton.gameObject.SetActive(true);
-        skipAbilityButton.SetInteractable(true);
-        skipAbilityButton.OnInteract -= SkipAbilityButton_OnInteract;
-        skipAbilityButton.OnInteract += SkipAbilityButton_OnInteract;
-    }
-
-    private void DisableSkipAbilityInteraction()
-    {
-        skipAbilityButton.SetInteractable(false);
-        skipAbilityButton.gameObject.SetActive(false);
-        skipAbilityButton.OnInteract -= SkipAbilityButton_OnInteract;
-    }
-
     private void SkipAbilityButton_OnInteract(object sender, InteractEventArgs e)
     {
         DisableSkipAbilityInteraction();
@@ -200,6 +158,44 @@ public class CambioPlayer : TablePlayer<CambioPlayer, CambioActionData, CambioPl
     }
 
     #endregion
+
+    #region Buttons
+
+    public void HideAllButtons()
+    {
+        callCambioButton?.gameObject.SetActive(false);
+        skipAbilityButton?.gameObject.SetActive(false);
+    }
+
+    private void EnableStartTurnInteraction()
+    {
+        callCambioButton.gameObject.SetActive(true);
+        callCambioButton.OnInteract -= CallCambioButton_OnInteract;
+        callCambioButton.OnInteract += CallCambioButton_OnInteract;
+
+        Game.InteractableDeck.OnInteract -= InteractableDeck_OnInteract;
+        Game.InteractableDeck.OnInteract += InteractableDeck_OnInteract;
+    }
+
+    private void DisableCallCambioInteraction()
+    {
+        callCambioButton.OnInteract -= CallCambioButton_OnInteract;
+        Game.InteractableDeck.OnInteract -= InteractableDeck_OnInteract;
+        callCambioButton.gameObject.SetActive(false);
+    }
+
+    private void EnableSkipAbilityButton()
+    {
+        skipAbilityButton.gameObject.SetActive(true);
+        skipAbilityButton.OnInteract -= SkipAbilityButton_OnInteract;
+        skipAbilityButton.OnInteract += SkipAbilityButton_OnInteract;
+    }
+
+    private void DisableSkipAbilityInteraction()
+    {
+        skipAbilityButton.OnInteract -= SkipAbilityButton_OnInteract;
+        skipAbilityButton.gameObject.SetActive(false);
+    }
 
     #endregion
 

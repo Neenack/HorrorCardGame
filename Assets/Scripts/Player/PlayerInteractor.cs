@@ -79,7 +79,7 @@ public class PlayerInteractor : NetworkBehaviour
         }
 
         // Only highlight if interactable exists and CanInteract is true
-        if (interactable != null && interactable.CanInteract())
+        if (interactable != null && interactable.CanInteract(NetworkManager.Singleton.LocalClientId))
         {
             if (currentTarget != interactable)
             {
