@@ -347,8 +347,8 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
                 player.TryAddSeenCard(targetCard);
                 if (!currentPlayer.IsAI)
                 {
-                    InteractionManager.SetCardInteraction(playerCard, true, currentPlayer, new CambioActionData(CambioActionType.CompareCards, true, currentPlayer.TablePlayerID));
-                    InteractionManager.SetCardInteraction(targetCard, true, currentPlayer, new CambioActionData(CambioActionType.CompareCards, true, currentPlayer.TablePlayerID));
+                    InteractionManager.SetCardInteraction(playerCard, true, currentPlayer, new CambioActionData(CambioActionType.CompareCards, true, currentPlayer.TablePlayerID, 0, 0, playerCard.NetworkObjectId));
+                    InteractionManager.SetCardInteraction(targetCard, true, currentPlayer, new CambioActionData(CambioActionType.CompareCards, true, currentPlayer.TablePlayerID, 0, 0, targetCard.NetworkObjectId));
                 }
                 else
                 {
@@ -410,7 +410,7 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
                 foreach (var player in Players)
                 {
                     if (player == currentPlayer) InteractionManager.SetHandInteraction(currentPlayer.Hand, false);
-                    else InteractionManager.SetHandInteraction(player.Hand, true, currentPlayer, new CambioActionData(CambioActionType.SwapHand));
+                    else InteractionManager.SetHandInteraction(player.Hand, true, currentPlayer, new CambioActionData(CambioActionType.SwapHand, true, currentPlayer.TablePlayerID, 0, player.TablePlayerID, 0));
                 }
                 return;
             case 11:
@@ -459,19 +459,18 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
 
                 StartCoroutine(ExecuteActionRoutine(new CambioActionData(CambioActionType.SwapCard, true, currentPlayer.TablePlayerID, playerCardChoice.NetworkObjectId, otherPlayer.TablePlayerID,otherCardChoice.NetworkObjectId)));
             }
+
+            selectedCards.Clear();
         }
         else if (selectedCards.Count == 1)
         {
-            ConsoleLog.Instance.Log("Select another players card!");
+            Debug.Log("Select another players card!");
 
-            CambioPlayer playerWithCard = GetPlayerWithCard(card);
-            if (playerWithCard.TablePlayerID == currentPlayer.TablePlayerID)
+            InteractionManager.SetHandInteraction(currentPlayer.Hand, false, currentPlayer);
+            foreach (var player in Players)
             {
-                foreach (var player in Players)
-                {
-                    if (player == currentPlayer) InteractionManager.SetHandInteraction(currentPlayer.Hand, false);
-                    InteractionManager.SetHandInteraction(player.Hand, true, currentPlayer, new CambioActionData(CambioActionType.SelectCard, false, currentPlayer.TablePlayerID));
-                }
+                if (player.TablePlayerID == currentPlayer.TablePlayerID) continue;
+                InteractionManager.SetHandInteraction(player.Hand, true, currentPlayer, new CambioActionData(CambioActionType.SelectCard, false, currentPlayer.TablePlayerID));
             }
         }
     }

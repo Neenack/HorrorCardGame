@@ -300,7 +300,6 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
         }
 
         //Disables all previous interactions with cards before executing a new action
-        InteractionManager.ResetAllInteractions();
         StartCoroutine(ExecuteActionRoutine(action));
     }
 

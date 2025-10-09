@@ -2,11 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Unity.Netcode;
-using UnityEditor.PackageManager;
-using UnityEngine.XR;
 using static Interactable;
-using static UnityEngine.Rendering.DebugUI;
-using static UnityEngine.Video.VideoPlayer;
 
 
 public abstract class TableInteractionManager<TPlayer, TAction, TAI> : NetworkBehaviour
@@ -22,10 +18,25 @@ public abstract class TableInteractionManager<TPlayer, TAction, TAI> : NetworkBe
 
     protected InteractDisplay nullDisplay = new InteractDisplay("N/A", true, "Error", "Display not found :)");
 
+    private ulong[] GetClientIDArrayFromPlayerList(IEnumerable<TPlayer> players)
+    {
+        return players != null && players.Any() ? players.Select(p => p.LocalClientID).ToArray() : null;
+    }
+
     private void Awake()
     {
         game = GetComponent<CardGame<TPlayer, TAction, TAI>>();
+
+        game.OnAnyActionExecuted += Game_OnAnyActionExecuted;
     }
+
+    public override void OnDestroy()
+    {
+        base.OnDestroy();
+
+        game.OnAnyActionExecuted -= Game_OnAnyActionExecuted;
+    }
+
 
     #region Abstract Functions
 
@@ -33,13 +44,6 @@ public abstract class TableInteractionManager<TPlayer, TAction, TAI> : NetworkBe
     protected abstract InteractDisplay GetInteractDisplay(TAction action);
 
     #endregion
-
-
-    private ulong[] GetClientIDArrayFromPlayerList(IEnumerable<TPlayer> players)
-    {
-        return players != null && players.Any() ? players.Select(p => p.LocalClientID).ToArray() : null;
-    }
-
 
     #region Set Card Interactable
 
@@ -71,7 +75,7 @@ public abstract class TableInteractionManager<TPlayer, TAction, TAI> : NetworkBe
         }
 
         //No clients, just reset the card
-        if (clients == null)
+        if (clients == null || clients.Length == 0)
         {
             card.Interactable.ClearAllowedClients();
             card.Interactable.ResetDisplay();
@@ -187,6 +191,11 @@ public abstract class TableInteractionManager<TPlayer, TAction, TAI> : NetworkBe
 
     #region Reset Interactions
 
+    private void Game_OnAnyActionExecuted()
+    {
+        ResetAllInteractions();
+    }
+
     public void ResetAllInteractions()
     {
         if (!IsServer) return;
@@ -198,18 +207,6 @@ public abstract class TableInteractionManager<TPlayer, TAction, TAI> : NetworkBe
                 card.Interactable.ClearAllowedClients();
                 card.Interactable.ResetDisplay();
             }
-        }
-
-        // Unsubscribe all events on all clients
-        UnsubscribeAllClientRpc();
-    }
-
-    [ClientRpc]
-    private void UnsubscribeAllClientRpc()
-    {
-        foreach (var player in Game.Players)
-        {
-            player.UnsubscribeAll();
         }
     }
 

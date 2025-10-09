@@ -8,6 +8,7 @@ public class PlayerInteractor : NetworkBehaviour
     public event Action OnInteractTargetUpdated;
 
     [Header("Interaction Settings")]
+    [SerializeField] private Camera playerCamera;
     [SerializeField] private float interactDistance = 5f;
     [SerializeField] private Transform holdPos;
     [SerializeField] private LayerMask interactableLayer;
@@ -18,18 +19,11 @@ public class PlayerInteractor : NetworkBehaviour
     private GameObject heldObj; //object which we pick up
     private Rigidbody heldObjRb; //rigidbody of object we pick up
 
-
-    private Camera playerCamera;
-
     private IInteractable currentTarget;
     private IHighlighter currentHighlighter;
 
     public IInteractable GetCurrentInteractable() => currentTarget;
 
-    void Start()
-    {
-        playerCamera = GetComponentInChildren<Camera>();
-    }
 
     void Update()
     {
@@ -66,6 +60,8 @@ public class PlayerInteractor : NetworkBehaviour
 
     private void CheckForInteractable()
     {
+        if (playerCamera == null) return;
+
         Ray ray = new Ray(playerCamera.transform.position, playerCamera.transform.forward);
         RaycastHit hit;
 

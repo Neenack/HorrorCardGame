@@ -120,7 +120,7 @@ public class LobbyManager : MonoBehaviour {
             lobbyPollTimer -= Time.deltaTime;
             if (lobbyPollTimer <= 0f)
             {
-                lobbyPollTimer = 1.1f;
+                lobbyPollTimer = 1.5f;
 
                 try
                 {

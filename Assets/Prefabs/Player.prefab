@@ -1815,6 +1815,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerInteractor
   ShowTopMostFoldoutHeaderGroup: 1
+  playerCamera: {fileID: 5248894207208019214}
   interactDistance: 5
   holdPos: {fileID: 622062857952889650}
   interactableLayer:

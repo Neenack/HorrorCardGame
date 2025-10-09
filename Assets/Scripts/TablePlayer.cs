@@ -79,7 +79,7 @@ public abstract class TablePlayer<TPlayer, TAction, TAI> : NetworkBehaviour
         if (handCardIds != null) handCardIds.OnListChanged -= OnHandCardIdsChanged;
 
         UnsubscribeFromGame();
-        UnsubscribeAll();
+        UnsubscribeAllCards();
     }
 
     private void AssignTablePlayerID()
@@ -101,7 +101,7 @@ public abstract class TablePlayer<TPlayer, TAction, TAI> : NetworkBehaviour
 
 
     /// <summary>
-    /// Sets the game for the table player
+    /// Sets the game for the table player (called both on server and clients)
     /// </summary>
     public void SetGame(ICardGame<TPlayer, TAction, TAI> game)
     {
@@ -117,20 +117,19 @@ public abstract class TablePlayer<TPlayer, TAction, TAI> : NetworkBehaviour
         if (game == null) return;
 
         game.CurrentGameState.OnValueChanged += OnGameStateChanged;
-        game.CurrentPlayerTurnTableID.OnValueChanged += OnTurnChanged;
         game.PileCardID.OnValueChanged += OnPileCardChanged;
-        game.OnAnyActionExecuted += Game_OnServerActionExecuted;
+        game.CurrentPlayerTurnTableID.OnValueChanged += OnTurnChanged;
+        game.OnAnyActionExecuted += Game_OnActionExecuted;
         game.OnGameReset += Game_OnGameReset;
     }
-
     private void UnsubscribeFromGame()
     {
         if (game == null) return;
 
         game.CurrentGameState.OnValueChanged -= OnGameStateChanged;
-        game.CurrentPlayerTurnTableID.OnValueChanged -= OnTurnChanged;
         game.PileCardID.OnValueChanged -= OnPileCardChanged;
-        game.OnAnyActionExecuted -= Game_OnServerActionExecuted;
+        game.CurrentPlayerTurnTableID.OnValueChanged -= OnTurnChanged;
+        game.OnAnyActionExecuted -= Game_OnActionExecuted;
         game.OnGameReset -= Game_OnGameReset;
     }
 
@@ -167,11 +166,11 @@ public abstract class TablePlayer<TPlayer, TAction, TAI> : NetworkBehaviour
         switch (newValue)
         {
             case GameState.Starting:
-                Game_OnServerGameStarted();
+                Game_OnGameStarted();
                 break;
 
             case GameState.Ending:
-                Game_OnServerGameEnded();
+                Game_OnGameEnded();
                 break;
         }
     }
@@ -183,16 +182,16 @@ public abstract class TablePlayer<TPlayer, TAction, TAI> : NetworkBehaviour
     {
         if (IsAI) return;
 
-        UnsubscribeAll();
+        UnsubscribeAllCards();
 
         if (oldValue == TablePlayerID && isTurn)
         {
-            EndPlayerTurn();
+            OnTurnEnded();
         }
 
         if (newValue == TablePlayerID && game.GetCurrentTurnPlayer().PlayerData.OwnerClientId == NetworkManager.Singleton.LocalClientId)
         {
-            StartPlayerTurn();
+            OnTurnStarted();
         }
     }
 
@@ -204,35 +203,26 @@ public abstract class TablePlayer<TPlayer, TAction, TAI> : NetworkBehaviour
 
     }
 
-    protected virtual void Game_OnServerGameStarted()
+    protected virtual void Game_OnGameStarted()
     {
-        CreateAI();
-
-        Game_OnGameStartedClientRpc();
+        if (IsServer) CreateAI();
     }
 
-    protected virtual void Game_OnServerGameEnded()
-    {
-        Game_OnGameEndedClientRpc();
-    }
+    protected virtual void Game_OnGameEnded() { }
 
     protected virtual void Game_OnGameReset()
     {
         ResetHand();
     }
-    protected virtual void Game_OnServerActionExecuted() 
+    protected virtual void Game_OnActionExecuted() 
     {
-        Game_OnActionExecutedClientRpc();
+        UnsubscribeAllCards();
     }
-
-    [ClientRpc] protected virtual void Game_OnGameStartedClientRpc() { }
-    [ClientRpc] protected virtual void Game_OnGameEndedClientRpc() { }
-    [ClientRpc] protected virtual void Game_OnActionExecutedClientRpc() { }
 
     /// <summary>
     /// Called when the players turn starts, and only called on the players local client
     /// </summary>
-    protected virtual void StartPlayerTurn()
+    protected virtual void OnTurnStarted()
     {
         isTurn = true;
     }
@@ -240,7 +230,7 @@ public abstract class TablePlayer<TPlayer, TAction, TAI> : NetworkBehaviour
     /// <summary>
     /// Called when the players turn ends, and only called on the players local client
     /// </summary>
-    protected virtual void EndPlayerTurn()
+    protected virtual void OnTurnEnded()
     {
         isTurn = false;
     }
@@ -250,8 +240,10 @@ public abstract class TablePlayer<TPlayer, TAction, TAI> : NetworkBehaviour
     /// <summary>
     /// Unsubscribes from all known subscriptions
     /// </summary>
-    public void UnsubscribeAll()
+    public void UnsubscribeAllCards()
     {
+        Debug.Log("Unsubscribe cards on " + GetName());
+
         if (eventSubscriptionDictionary.Count > 0)
         {
             //Unsubscribe from all cards if any

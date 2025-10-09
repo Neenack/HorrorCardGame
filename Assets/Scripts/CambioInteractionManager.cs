@@ -68,8 +68,14 @@ public class CambioInteractionManager : TableInteractionManager<CambioPlayer, Ca
                     return new InteractDisplay("", true, "Blind Swap", "Select a card to swap");
                 return nullDisplay;
 
+            case CambioActionType.CompareCards:
+                return new InteractDisplay("", true, "Choose Card", $"Keep the {PlayingCard.GetPlayingCardFromNetworkID(data.TargetCardId).ToString()}");
+
             case CambioActionType.Stack:
                 return new InteractDisplay("", true, "Stack Card", "Try stack a matching card on the pile");
+
+            case CambioActionType.GiveCard:
+                return new InteractDisplay("", true, "Choose Card", $"Give card to player");
 
         }
 

@@ -118,7 +118,7 @@ public class LobbyUI : MonoSingleton<LobbyUI>
         }
     }
 
-    private void Hide() {
+    public void Hide() {
         gameObject.SetActive(false);
     }
 

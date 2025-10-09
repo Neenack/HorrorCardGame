@@ -58,61 +58,52 @@ public class CambioPlayer : TablePlayer<CambioPlayer, CambioActionData, CambioPl
 
     #region Game Subscriptions
 
-    protected override void Game_OnServerGameStarted()
+    protected override void Game_OnGameStarted()
     {
-        base.Game_OnServerGameStarted();
+        base.Game_OnGameStarted();
 
-        if (!IsAI)
+        if (IsServer)
         {
-            callCambioButton.SetAllowedClients(PlayerData.OwnerClientId);
-            skipAbilityButton.SetAllowedClients(PlayerData.OwnerClientId);
+            if (!IsAI)
+            {
+                callCambioButton.SetAllowedClients(PlayerData.OwnerClientId);
+                skipAbilityButton.SetAllowedClients(PlayerData.OwnerClientId);
+            }
         }
 
-        HideAllButtons();
-    }
-
-    protected override void Game_OnServerGameEnded()
-    {
-        base.Game_OnServerGameEnded();
-
-        calledCambioText?.gameObject.SetActive(false);
-        scoreText.gameObject.SetActive(false);
-    }
-
-    [ClientRpc]
-    protected override void Game_OnGameStartedClientRpc()
-    {
         calledCambioText.gameObject.SetActive(false);
         scoreText.gameObject.SetActive(false);
 
         HideAllButtons();
     }
 
-    [ClientRpc]
-    protected override void Game_OnGameEndedClientRpc()
+    protected override void Game_OnGameEnded()
     {
+        base.Game_OnGameEnded();
+
         calledCambioText?.gameObject.SetActive(false);
         scoreText.gameObject.SetActive(false);
 
         HideAllButtons();
     }
 
-    [ClientRpc]
-    protected override void Game_OnActionExecutedClientRpc()
+    protected override void Game_OnActionExecuted()
     {
+        base.Game_OnActionExecuted();
+
         HideAllButtons();
     }
 
-    protected override void StartPlayerTurn()
+    protected override void OnTurnStarted()
     {
-        base.StartPlayerTurn();
+        base.OnTurnStarted();
 
         EnableStartTurnInteraction();
     }
 
-    protected override void EndPlayerTurn()
+    protected override void OnTurnEnded()
     {
-        base.EndPlayerTurn();
+        base.OnTurnEnded();
 
         HideAllButtons();
         DisableCallCambioInteraction();

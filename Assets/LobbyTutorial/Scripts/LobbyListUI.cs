@@ -5,12 +5,7 @@ using Unity.Services.Lobbies.Models;
 using UnityEngine;
 using UnityEngine.UI;
 
-public class LobbyListUI : MonoBehaviour {
-
-
-    public static LobbyListUI Instance { get; private set; }
-
-
+public class LobbyListUI : MonoSingleton<LobbyListUI> {
 
     [SerializeField] private Transform lobbySingleTemplate;
     [SerializeField] private Transform container;
@@ -18,8 +13,8 @@ public class LobbyListUI : MonoBehaviour {
     [SerializeField] private Button createLobbyButton;
 
 
-    private void Awake() {
-        Instance = this;
+    protected override void Awake() {
+        base.Awake();
 
         lobbySingleTemplate.gameObject.SetActive(false);
 
@@ -73,7 +68,7 @@ public class LobbyListUI : MonoBehaviour {
         LobbyCreateUI.Instance.Show();
     }
 
-    private void Hide() {
+    public void Hide() {
         gameObject.SetActive(false);
     }
 

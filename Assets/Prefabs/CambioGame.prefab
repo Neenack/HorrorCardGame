@@ -154,7 +154,7 @@ MonoBehaviour:
   cardLiftHeight: 0.1
   cardRevealHeight: 0.2
   timeBetweenPlayerReveals: 1
-  cardStacking: 1
+  cardStacking: 0
   stackingTime: 2
 --- !u!114 &6758915026341907764
 MonoBehaviour:
