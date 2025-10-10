@@ -32,6 +32,12 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
 
     private List<PlayingCard> selectedCards = new List<PlayingCard>();
 
+    #region Public Accessors
+
+    public NetworkVariable<bool> IsStacking => isStacking;
+
+    #endregion
+
     public override void OnNetworkSpawn()
     {
         base.OnNetworkSpawn();
@@ -46,29 +52,13 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
         isStacking.OnValueChanged -= OnStackingChanged;
     }
 
-    #region Start Game
-
-    protected override void ServerStartGame()
-    {
-        foreach (var player in Players) player.hasPlayedLastTurn.Value = false;
-
-        base.ServerStartGame();
-    }
-
-    #endregion
-
     #region Turn Management
 
     protected override IEnumerator NextTurnRoutine()
     {
         if (!IsServer) yield break;
 
-        foreach (var player in Players) player.Hand.UpdateHand();
-
         selectedCards.Clear();
-
-        //Set last turn if someone has called cambio
-        if (currentPlayer) currentPlayer.hasPlayedLastTurn.Value = Players.Any(p => !p.IsPlaying());
 
         //Stacking
         if (cardStacking && cardPile.Count > 0)

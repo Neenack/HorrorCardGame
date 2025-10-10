@@ -166,18 +166,17 @@ public abstract class TablePlayer<TPlayer, TAction, TAI> : NetworkBehaviour
     /// <summary>
     /// Called when the turn changes for the game
     /// </summary>
-    private void OnTurnChanged(ulong oldValue, ulong newValue)
+    protected virtual void OnTurnChanged(ulong oldValue, ulong newValue)
     {
-        if (IsAI) return;
-
         UnsubscribeAllCards();
+        Hand.UpdateHand();
 
         if (oldValue == TablePlayerID && isTurn)
         {
             OnTurnEnded();
         }
 
-        if (newValue == TablePlayerID && game.GetCurrentTurnPlayer().PlayerData.OwnerClientId == NetworkManager.Singleton.LocalClientId)
+        if (newValue == TablePlayerID && game.GetCurrentTurnPlayer().LocalClientID == NetworkManager.Singleton.LocalClientId)
         {
             OnTurnStarted();
         }

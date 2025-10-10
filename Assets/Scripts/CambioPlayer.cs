@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using TMPro;
 using Unity.Multiplayer.Playmode;
 using Unity.Netcode;
@@ -54,8 +55,15 @@ public class CambioPlayer : TablePlayer<CambioPlayer, CambioActionData, CambioPl
 
         NotifyCallCambioClientRpc();
     }
+
     [ClientRpc] private void NotifyCallCambioClientRpc() => calledCambioText.gameObject.SetActive(true);
 
+
+    [ServerRpc(RequireOwnership = false)]
+    private void RequestSetLastTurnServerRpc(bool lastTurn)
+    {
+        hasPlayedLastTurn.Value = lastTurn;
+    }
 
 
     #region Game Subscriptions
@@ -67,6 +75,7 @@ public class CambioPlayer : TablePlayer<CambioPlayer, CambioActionData, CambioPl
         if (Game is ICambioGame cambioGame)
         {
             cambioGame.OnAbilityStarted += CambioGame_OnAbilityStarted;
+            cambioGame.IsStacking.OnValueChanged += OnStackingChanged;
         }
 
     }
@@ -78,6 +87,7 @@ public class CambioPlayer : TablePlayer<CambioPlayer, CambioActionData, CambioPl
         if (Game is ICambioGame cambioGame)
         {
             cambioGame.OnAbilityStarted -= CambioGame_OnAbilityStarted;
+            cambioGame.IsStacking.OnValueChanged -= OnStackingChanged;
         }
 
     }
@@ -92,6 +102,10 @@ public class CambioPlayer : TablePlayer<CambioPlayer, CambioActionData, CambioPl
             if (value >= 6 && value != 13) EnableSkipAbilityButton();
         }
     }
+    private void OnStackingChanged(bool oldValue, bool newValue)
+    {
+        
+    }
 
     protected override void Game_OnGameStarted()
     {
@@ -104,6 +118,8 @@ public class CambioPlayer : TablePlayer<CambioPlayer, CambioActionData, CambioPl
                 callCambioButton.SetAllowedClients(PlayerData.OwnerClientId);
                 skipAbilityButton.SetAllowedClients(PlayerData.OwnerClientId);
             }
+
+            hasPlayedLastTurn.Value = false;
         }
 
         HideAllText();
@@ -129,12 +145,21 @@ public class CambioPlayer : TablePlayer<CambioPlayer, CambioActionData, CambioPl
     {
         base.OnTurnStarted();
 
-        EnableStartTurnInteraction();
+        if (!IsAI) EnableStartTurnInteraction();
+
+        if (hasPlayedLastTurn.Value == false)
+        {
+            bool isLastTurn = Game.Players.Any(p => !p.IsPlaying());
+            if (IsServer) hasPlayedLastTurn.Value = isLastTurn;
+            else RequestSetLastTurnServerRpc(isLastTurn);
+        }
     }
 
     protected override void OnTurnEnded()
     {
         base.OnTurnEnded();
+
+        if (IsAI) return;
 
         HideAllButtons();
         DisableCallCambioInteraction();
