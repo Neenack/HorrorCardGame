@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Runtime.InteropServices.WindowsRuntime;
 using Unity.Netcode;
 using UnityEngine;
@@ -146,6 +147,7 @@ public class CambioInteractionManager : TableInteractionManager<CambioPlayer, Ca
     private void Card_OnInteract_SwapHand(object sender, InteractEventArgs e)
     {
         ulong cardNetworkId = (sender as Interactable).GetComponent<PlayingCard>().NetworkObjectId;
+
         ulong playerWithCardId = Game.GetPlayerWithCard(cardNetworkId).TablePlayerID;
 
         Game.ExecuteAction(e.ClientID, new CambioActionData(CambioActionType.SwapHand, true, Game.CurrentPlayerTurnTableID.Value, 0, playerWithCardId, 0));

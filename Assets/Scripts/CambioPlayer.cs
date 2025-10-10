@@ -27,13 +27,7 @@ public class CambioPlayer : TablePlayer<CambioPlayer, CambioActionData, CambioPl
     {
         base.OnNetworkSpawn();
 
-        calledCambioText?.gameObject.SetActive(false);
-        scoreText.gameObject.SetActive(false);
-    }
-
-    public override void SetPlayer(PlayerData data)
-    {
-        base.SetPlayer(data);
+        HideAllText();
     }
 
     /// <summary>
@@ -47,6 +41,12 @@ public class CambioPlayer : TablePlayer<CambioPlayer, CambioActionData, CambioPl
         scoreText.gameObject.SetActive(true);
     }
 
+    private void HideAllText()
+    {
+        calledCambioText?.gameObject.SetActive(false);
+        scoreText?.gameObject.SetActive(false);
+    }
+
     //Called by the server
     public void CallCambio()
     {
@@ -55,6 +55,8 @@ public class CambioPlayer : TablePlayer<CambioPlayer, CambioActionData, CambioPl
         NotifyCallCambioClientRpc();
     }
     [ClientRpc] private void NotifyCallCambioClientRpc() => calledCambioText.gameObject.SetActive(true);
+
+
 
     #region Game Subscriptions
 
@@ -71,9 +73,7 @@ public class CambioPlayer : TablePlayer<CambioPlayer, CambioActionData, CambioPl
             }
         }
 
-        calledCambioText.gameObject.SetActive(false);
-        scoreText.gameObject.SetActive(false);
-
+        HideAllText();
         HideAllButtons();
     }
 
@@ -81,9 +81,7 @@ public class CambioPlayer : TablePlayer<CambioPlayer, CambioActionData, CambioPl
     {
         base.Game_OnGameEnded();
 
-        calledCambioText?.gameObject.SetActive(false);
-        scoreText.gameObject.SetActive(false);
-
+        HideAllText();
         HideAllButtons();
     }
 

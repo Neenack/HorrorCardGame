@@ -98,6 +98,8 @@ public class LobbyUI : MonoSingleton<LobbyUI>
                 player.Id != AuthenticationService.Instance.PlayerId // Don't allow kick self
             );
 
+            lobbyPlayerSingleUI.SetGameSettingsVisible(LobbyManager.Instance.IsLobbyHost());
+
             lobbyPlayerSingleUI.UpdatePlayer(player);
         }
 

@@ -67,7 +67,6 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
         //Set last turn if someone has called cambio
         if (currentPlayer) currentPlayer.hasPlayedLastTurn.Value = Players.Any(p => !p.IsPlaying());
 
-
         //Stacking
         if (cardStacking && cardPile.Count > 0)
         {
@@ -289,8 +288,6 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
     {
         if (!IsServer) yield break;
 
-        yield return StartCoroutine(base.ExecuteActionRoutine(action));
-
         ConsoleLog.Instance.Log($"{currentPlayer.GetName()} has executed Action: " + action.Type);
 
         CambioPlayer player = GetPlayerFromTablePlayerID(action.PlayerId);
@@ -402,14 +399,14 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
             case 9:
                 foreach (var player in Players)
                 {
-                    if (player == currentPlayer) InteractionManager.SetHandInteraction(currentPlayer.Hand, false);
+                    if (player.TablePlayerID == currentPlayer.TablePlayerID) InteractionManager.SetHandInteraction(currentPlayer.Hand, false);
                     else InteractionManager.SetHandInteraction(player.Hand, true, currentPlayer, new CambioActionData(CambioActionType.RevealCard));
                 }
                 return;
             case 10:
                 foreach (var player in Players)
                 {
-                    if (player == currentPlayer) InteractionManager.SetHandInteraction(currentPlayer.Hand, false);
+                    if (player.TablePlayerID == currentPlayer.TablePlayerID) InteractionManager.SetHandInteraction(currentPlayer.Hand, false);
                     else InteractionManager.SetHandInteraction(player.Hand, true, currentPlayer, new CambioActionData(CambioActionType.SwapHand, true, currentPlayer.TablePlayerID, 0, player.TablePlayerID, 0));
                 }
                 return;
@@ -459,8 +456,6 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
 
                 StartCoroutine(ExecuteActionRoutine(new CambioActionData(CambioActionType.SwapCard, true, currentPlayer.TablePlayerID, playerCardChoice.NetworkObjectId, otherPlayer.TablePlayerID,otherCardChoice.NetworkObjectId)));
             }
-
-            selectedCards.Clear();
         }
         else if (selectedCards.Count == 1)
         {

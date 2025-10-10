@@ -242,8 +242,6 @@ public abstract class TablePlayer<TPlayer, TAction, TAI> : NetworkBehaviour
     /// </summary>
     public void UnsubscribeAllCards()
     {
-        Debug.Log("Unsubscribe cards on " + GetName());
-
         if (eventSubscriptionDictionary.Count > 0)
         {
             //Unsubscribe from all cards if any

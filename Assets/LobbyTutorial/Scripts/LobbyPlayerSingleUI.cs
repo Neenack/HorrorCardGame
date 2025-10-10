@@ -11,6 +11,7 @@ public class LobbyPlayerSingleUI : MonoBehaviour {
     [SerializeField] private TextMeshProUGUI playerNameText;
     //[SerializeField] private Image characterImage;
     [SerializeField] private Button kickPlayerButton;
+    [SerializeField] private GameObject gameSettings;
 
 
     private Player player;
@@ -22,6 +23,10 @@ public class LobbyPlayerSingleUI : MonoBehaviour {
 
     public void SetKickPlayerButtonVisible(bool visible) {
         kickPlayerButton.gameObject.SetActive(visible);
+    }
+
+    public void SetGameSettingsVisible(bool visible) {
+        gameSettings.SetActive(visible);
     }
 
     public void UpdatePlayer(Player player) {

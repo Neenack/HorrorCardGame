@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Unity.Multiplayer.Playmode;
 using Unity.Netcode;
+using UnityEditor.Timeline.Actions;
 using UnityEngine;
 public enum GameState
 {
@@ -107,6 +108,7 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
     protected abstract bool HasGameEnded();
     protected abstract IEnumerator ShowWinnerRoutine();
     protected abstract bool CanOnlyPlayInTurn();
+    protected abstract IEnumerator ExecuteActionRoutine(TAction action);
 
     #endregion
 
@@ -149,9 +151,10 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
         ConsoleLog.Instance.Log("Start Game");
 
         //Make list of active players, if not using bots do not include them
-        activePlayers = fillBots ? tablePlayers : tablePlayers.Where(p => p.PlayerData != null).ToList();
-
+        activePlayers = GamemodeSettings.Instance.UseAI ? tablePlayers : tablePlayers.Where(p => p.PlayerData != null).ToList();
         foreach (var player in activePlayers) player.SetGame(this);
+
+        GameStartClientRpc(activePlayers.Select(p => p.TablePlayerID).ToArray());
 
         //Change game to starting
         gameState.Value = GameState.Starting;
@@ -163,6 +166,15 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
 
         // Start dealing cards
         StartCoroutine(StartGameCoroutine());
+    }
+
+    [ClientRpc]
+    private void GameStartClientRpc(ulong[] serverActivePlayers)
+    {
+        if (IsServer) return;
+
+        activePlayers = tablePlayers.Where(p => tablePlayers.Contains(p)).ToList();
+        foreach (var player in activePlayers) player.SetGame(this);
     }
 
     private IEnumerator StartGameCoroutine()
@@ -207,6 +219,16 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
         currentPlayerTurnTableId.Value = ulong.MaxValue;
 
         CardPooler.Instance.ReturnAllActiveCards();
+
+        ResetGameClientRpc();
+    }
+
+    [ClientRpc]
+    private void ResetGameClientRpc()
+    {
+        if (IsServer) return;
+
+        OnGameReset?.Invoke();
     }
 
 
@@ -231,6 +253,15 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
 
         if (attempts > activePlayers.Count || HasGameEnded())
         {
+            //Wait for all cards to stop moving
+            foreach (var player in activePlayers)
+            {
+                foreach (var card in player.Hand.Cards)
+                {
+                    if (card.IsMoving) yield return new WaitUntil(() => !card.IsMoving);
+                }
+            }
+
             StartCoroutine(ShowWinnerRoutine());
             yield break;
         }
@@ -299,23 +330,21 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
             return;
         }
 
-        //Disables all previous interactions with cards before executing a new action
+        OnAnyActionExecuted?.Invoke();
+
+        ExecuteActionClientRpc();
+
         StartCoroutine(ExecuteActionRoutine(action));
     }
 
-
-
-
-
-    /// <summary>
-    /// Coroutine to execute an action in the game
-    /// </summary>
-    protected virtual IEnumerator ExecuteActionRoutine(TAction action)
+    [ClientRpc]
+    private void ExecuteActionClientRpc()
     {
-        if (!IsServer) yield break;
+        if (IsServer) return;
 
         OnAnyActionExecuted?.Invoke();
     }
+
 
     #endregion
 
