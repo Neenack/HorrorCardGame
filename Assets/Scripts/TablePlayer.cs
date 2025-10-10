@@ -67,6 +67,7 @@ public abstract class TablePlayer<TPlayer, TAction, TAI> : NetworkBehaviour
         base.OnNetworkSpawn();
 
         ResetHand();
+
         if (IsServer) AssignTablePlayerID();
     }
 
@@ -82,14 +83,6 @@ public abstract class TablePlayer<TPlayer, TAction, TAI> : NetworkBehaviour
         UnsubscribeAllCards();
     }
 
-    private void AssignTablePlayerID()
-    {
-        byte[] buffer = new byte[8];
-        new System.Random().NextBytes(buffer);
-        tablePlayerId.Value = System.BitConverter.ToUInt64(buffer, 0);
-    }
-
-
     /// <summary>
     /// Sets the player data for the table player
     /// </summary>
@@ -98,6 +91,15 @@ public abstract class TablePlayer<TPlayer, TAction, TAI> : NetworkBehaviour
         playerData = data;
     }
 
+    /// <summary>
+    /// Sets the player ID for the table game
+    /// </summary>
+    private void AssignTablePlayerID()
+    {
+        byte[] buffer = new byte[8];
+        new System.Random().NextBytes(buffer);
+        tablePlayerId.Value = System.BitConverter.ToUInt64(buffer, 0);
+    }
 
 
     /// <summary>
@@ -112,7 +114,18 @@ public abstract class TablePlayer<TPlayer, TAction, TAI> : NetworkBehaviour
         SubscribeToGame();
     }
 
-    private void SubscribeToGame()
+    /// <summary>
+    /// Returns the players name
+    /// </summary>
+    public string GetName()
+    {
+        if (playerData) return playerData.GetName();
+        return "[AI] " + gameObject.name;
+    }
+
+    #region Game Subscriptions
+
+    protected virtual void SubscribeToGame()
     {
         if (game == null) return;
 
@@ -122,7 +135,7 @@ public abstract class TablePlayer<TPlayer, TAction, TAI> : NetworkBehaviour
         game.OnAnyActionExecuted += Game_OnActionExecuted;
         game.OnGameReset += Game_OnGameReset;
     }
-    private void UnsubscribeFromGame()
+    protected virtual void UnsubscribeFromGame()
     {
         if (game == null) return;
 
@@ -132,27 +145,6 @@ public abstract class TablePlayer<TPlayer, TAction, TAI> : NetworkBehaviour
         game.OnAnyActionExecuted -= Game_OnActionExecuted;
         game.OnGameReset -= Game_OnGameReset;
     }
-
-
-    /// <summary>
-    /// Resets the hand for the player
-    /// </summary>
-    public void ResetHand()
-    {
-        if (hand == null)
-        {
-            hand = new PlayerHand();
-
-            hand.OnHandUpdated += Hand_OnHandUpdated;
-            handCardIds.OnListChanged += OnHandCardIdsChanged;
-        }
-
-        hand.ClearHand();
-        handCardIds.Clear();
-    }
-
-
-    #region Game Subscriptions
 
     /// <summary>
     /// Called when the game state changes
@@ -249,40 +241,6 @@ public abstract class TablePlayer<TPlayer, TAction, TAI> : NetworkBehaviour
         isTurn = false;
     }
 
-    #endregion
-
-    /// <summary>
-    /// Unsubscribes from all known subscriptions
-    /// </summary>
-    public void UnsubscribeAllCards()
-    {
-        if (eventSubscriptionDictionary.Count > 0)
-        {
-            //Unsubscribe from all cards if any
-            foreach (var kvp in eventSubscriptionDictionary)
-            {
-                foreach (var card in kvp.Value)
-                {
-                    //Debug.Log($"Unsubscribing card from {kvp.Key.Method.Name} on {gameObject.name}");
-
-                    card.Interactable.OnInteract -= kvp.Key;
-                }
-            }
-            eventSubscriptionDictionary.Clear();
-        }
-    }
-
-
-    /// <summary>
-    /// Returns the players name
-    /// </summary>
-    public string GetName()
-    {
-        if (playerData) return playerData.GetName();
-        return "[AI] " + gameObject.name;
-    }
-
-
     /// <summary>
     /// Called when the players hand card ids are updated, syncronizes the hand for each client
     /// </summary>
@@ -297,9 +255,9 @@ public abstract class TablePlayer<TPlayer, TAction, TAI> : NetworkBehaviour
         }
     }
 
-    #region Player Interaction
+    #endregion
 
-    #region Subscribing Specific Cards
+    #region Card Subscriptions
 
     /// <summary>
     /// Subscribes a playing card to a given event
@@ -370,27 +328,26 @@ public abstract class TablePlayer<TPlayer, TAction, TAI> : NetworkBehaviour
         }
     }
 
-    #endregion
-
-    #region Subscribing Hand
-
     /// <summary>
-    /// Subscribes the whole player hand to a given event
+    /// Unsubscribes from all known subscriptions
     /// </summary>
-    public void SubscribeHandTo(EventHandler<InteractEventArgs> onInteract)
+    public void UnsubscribeAllCards()
     {
-        foreach (var card in Hand.Cards) SubscribeCardTo(card, onInteract);
-    }
+        if (eventSubscriptionDictionary.Count > 0)
+        {
+            //Unsubscribe from all cards if any
+            foreach (var kvp in eventSubscriptionDictionary)
+            {
+                foreach (var card in kvp.Value)
+                {
+                    //Debug.Log($"Unsubscribing card from {kvp.Key.Method.Name} on {gameObject.name}");
 
-    /// <summary>
-    /// Unsubscribes a whole player hand from a given event
-    /// </summary>
-    public void UnsubscribeHandFrom(EventHandler<InteractEventArgs> onInteract)
-    {
-        foreach (var card in Hand.Cards) UnsubscribeCardFrom(card, onInteract);
+                    card.Interactable.OnInteract -= kvp.Key;
+                }
+            }
+            eventSubscriptionDictionary.Clear();
+        }
     }
-
-    #endregion
 
     #endregion
 
@@ -432,6 +389,23 @@ public abstract class TablePlayer<TPlayer, TAction, TAI> : NetworkBehaviour
         //if (removed) handCardIds.Remove(card.NetworkObjectId);
 
         return handCardIds.Remove(card.NetworkObjectId);
+    }
+
+    /// <summary>
+    /// Resets the hand for the player
+    /// </summary>
+    public void ResetHand()
+    {
+        if (hand == null)
+        {
+            hand = new PlayerHand();
+
+            hand.OnHandUpdated += Hand_OnHandUpdated;
+            handCardIds.OnListChanged += OnHandCardIdsChanged;
+        }
+
+        hand.ClearHand();
+        if (IsServer) handCardIds.Clear();
     }
 
     protected virtual void Hand_OnHandUpdated()

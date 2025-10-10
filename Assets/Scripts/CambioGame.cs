@@ -5,20 +5,23 @@ using System.Linq;
 using Unity.Netcode;
 using UnityEngine;
 
-public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerAI>
+public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerAI>, ICambioGame
 {
+    public event Action OnAbilityStarted;
+
     [Header("Cambio Settings")]
     [SerializeField] private float cardViewingTime = 3f;
     [SerializeField] private Vector3 cardPullPositionOffset = new Vector3(0f, 0.3f, 0f);
     [SerializeField] private float cardLiftHeight = 0.1f;
     [SerializeField] private float cardRevealHeight = 0.2f;
     [SerializeField] private float timeBetweenPlayerReveals = 1f;
+    [SerializeField] private int maxCardCount = 8;
 
     [Header("Stacking Settings")]
     [SerializeField] private bool cardStacking = true;
     [SerializeField] private float stackingTime = 2f;
     private CambioPlayer playerToRecieveCard;
-    private bool hasStacked = false;
+    private bool playerHasStackedCard = false;
     private bool waitingForStackInput = false;
 
     private NetworkVariable<bool> isStacking = new NetworkVariable<bool>(
@@ -100,7 +103,7 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
         isStacking.Value = false;
 
         //Waits until players have finished the stacking routine if someone stacked a card
-        yield return new WaitUntil(() => hasStacked == false);
+        yield return new WaitUntil(() => playerHasStackedCard == false);
     }
 
     /// <summary>
@@ -386,6 +389,8 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
             return;
         }
 
+        OnAbilityStarted?.Invoke();
+
         switch (cardValue)
         {
             case 6:
@@ -511,7 +516,9 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
             ConsoleLog.Instance.Log("Stacking enabled!");
 
             var allCards = Players.SelectMany(p => p.Hand.Cards).ToList();
-            InteractionManager.SetCardInteractions(allCards, true, Players, new CambioActionData(CambioActionType.Stack));
+            var playersWhoCanStack = Players.Where(p => p.HandCardIDs.Count < maxCardCount);
+
+            InteractionManager.SetCardInteractions(allCards, true, playersWhoCanStack, new CambioActionData(CambioActionType.Stack));
         }
         else
         {
@@ -528,13 +535,13 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
     /// </summary>
     private void StackCard(CambioPlayer playerWhoStacked, PlayingCard cardToStack)
     {
-        if (hasStacked || isStacking.Value == false) return;
+        if (playerHasStackedCard || isStacking.Value == false) return;
 
         CambioPlayer playerWithCard = GetPlayerWithCard(cardToStack);
 
         if (!playerWithCard.RemoveCardFromHand(cardToStack)) return;
 
-        hasStacked = true;
+        playerHasStackedCard = true;
 
         InteractionManager.ResetAllInteractions();
 
@@ -580,7 +587,7 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
             }
         }
 
-        hasStacked = false;
+        playerHasStackedCard = false;
     }
 
 

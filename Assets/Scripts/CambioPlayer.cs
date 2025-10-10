@@ -60,6 +60,39 @@ public class CambioPlayer : TablePlayer<CambioPlayer, CambioActionData, CambioPl
 
     #region Game Subscriptions
 
+    protected override void SubscribeToGame()
+    {
+        base.SubscribeToGame();
+
+        if (Game is ICambioGame cambioGame)
+        {
+            cambioGame.OnAbilityStarted += CambioGame_OnAbilityStarted;
+        }
+
+    }
+
+    protected override void UnsubscribeFromGame()
+    {
+        base.UnsubscribeFromGame();
+
+        if (Game is ICambioGame cambioGame)
+        {
+            cambioGame.OnAbilityStarted -= CambioGame_OnAbilityStarted;
+        }
+
+    }
+
+    private void CambioGame_OnAbilityStarted()
+    {
+        if (isTurn) //CARD ADDED TO PILE AND IT THE PLAYERS TURN
+        {
+            PlayingCard card = PlayingCard.GetPlayingCardFromNetworkID(Game.PileCardID.Value);
+            int value = GetCardValue(card);
+
+            if (value >= 6 && value != 13) EnableSkipAbilityButton();
+        }
+    }
+
     protected override void Game_OnGameStarted()
     {
         base.Game_OnGameStarted();
@@ -106,20 +139,6 @@ public class CambioPlayer : TablePlayer<CambioPlayer, CambioActionData, CambioPl
         HideAllButtons();
         DisableCallCambioInteraction();
         DisableSkipAbilityInteraction();
-    }
-
-    /// <summary>
-    /// Called when the pile card changes (new card is added to pile)
-    /// </summary>
-    protected override void OnPileCardChanged(ulong previousCard, ulong newCard)
-    {
-        if (isTurn) //CARD ADDED TO PILE AND IT THE PLAYERS TURN
-        {
-            PlayingCard card = PlayingCard.GetPlayingCardFromNetworkID(newCard);
-            int value = GetCardValue(card);
-
-            if (value >= 6 && value != 13) EnableSkipAbilityButton();
-        }
     }
 
     #endregion
