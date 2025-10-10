@@ -2,9 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using Unity.Multiplayer.Playmode;
 using Unity.Netcode;
-using UnityEditor.Timeline.Actions;
 using UnityEngine;
 public enum GameState
 {
@@ -196,13 +194,15 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
     #region End Logic
 
 
-    protected virtual void ServerEndGame()
+    protected virtual IEnumerator ServerEndGame()
     {
         ConsoleLog.Instance.Log("Game Finished!");
 
         gameState.Value = GameState.Ending;
 
         ResetGame();
+
+        yield return new WaitForSeconds(1f);
 
         gameState.Value = GameState.WaitingToStart;
     }
@@ -300,13 +300,13 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
 
         if (playerTurn == null)
         {
-            ConsoleLog.Instance.Log("No current player assigned!");
+            Debug.Log("No current player assigned!");
             return;
         }
 
         if (CanOnlyPlayInTurn() && playerTurn?.PlayerData.OwnerClientId != playerID)
         {
-            ConsoleLog.Instance.Log("It is not your turn to execute an action!");
+            Debug.Log("It is not your turn to execute an action!");
             return;
         }
 
@@ -320,13 +320,13 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
     {
         if (currentPlayer == null)
         {
-            ConsoleLog.Instance.Log("No current player assigned!");
+            Debug.Log("No current player assigned!");
             return;
         }
 
         if (CanOnlyPlayInTurn() && currentPlayer?.PlayerData.OwnerClientId != playerID)
         {
-            ConsoleLog.Instance.Log($"Player {playerID} tried to execute an action out of turn!");
+            Debug.Log($"Player {playerID} tried to execute an action out of turn!");
             return;
         }
 
@@ -646,8 +646,6 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
             if (player.IsAI)
             {
                 player.SetPlayer(playerData);
-                player.SetGame(this);
-
                 return player.PlayerStandTransform;
             }
         }

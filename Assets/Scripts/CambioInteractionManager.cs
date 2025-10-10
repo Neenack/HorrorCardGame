@@ -111,13 +111,8 @@ public class CambioInteractionManager : TableInteractionManager<CambioPlayer, Ca
 
     private void Card_OnInteract_AfterDraw(object sender, InteractEventArgs e)
     {
-        Debug.Log("After draw interaction!");
-
         PlayingCard drawnCard = PlayingCard.GetPlayingCardFromNetworkID(Game.DrawnCardID.Value);
         CambioPlayer currentPlayer = Game.GetPlayerFromTablePlayerID(Game.CurrentPlayerTurnTableID.Value);
-
-        SetCardInteraction(drawnCard, false);
-
         PlayingCard chosenCard = (sender as Interactable).GetComponent<PlayingCard>();
 
         if (chosenCard == null)
@@ -169,7 +164,6 @@ public class CambioInteractionManager : TableInteractionManager<CambioPlayer, Ca
     private void Card_OnInteract_Stack(object sender, InteractEventArgs e)
     {
         ulong cardNetworkId = (sender as Interactable).GetComponent<PlayingCard>().NetworkObjectId;
-
         playerWhoStackedCard = Game.GetPlayerFromClientID(e.ClientID);
 
         Game.ExecuteAction(e.ClientID, new CambioActionData(CambioActionType.Stack, false, playerWhoStackedCard.TablePlayerID, 0, 0, cardNetworkId));

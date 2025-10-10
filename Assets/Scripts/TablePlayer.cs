@@ -142,17 +142,14 @@ public abstract class TablePlayer<TPlayer, TAction, TAI> : NetworkBehaviour
         if (hand == null)
         {
             hand = new PlayerHand();
+
             hand.OnHandUpdated += Hand_OnHandUpdated;
             handCardIds.OnListChanged += OnHandCardIdsChanged;
         }
 
         hand.ClearHand();
-
-        if (IsServer) handCardIds.Clear();
-        else ClearHandServerRpc();
+        handCardIds.Clear();
     }
-
-    [ServerRpc(RequireOwnership = false)] private void ClearHandServerRpc() => handCardIds.Clear();
 
 
     #region Game Subscriptions
@@ -162,7 +159,6 @@ public abstract class TablePlayer<TPlayer, TAction, TAI> : NetworkBehaviour
     /// </summary>
     private void OnGameStateChanged(GameState previousValue, GameState newValue)
     {
-        // Handle client-side game state changes
         switch (newValue)
         {
             case GameState.Starting:
@@ -196,24 +192,42 @@ public abstract class TablePlayer<TPlayer, TAction, TAI> : NetworkBehaviour
     }
 
     /// <summary>
-    /// Called when the pile card changes (new card is added to pile)
+    /// Called when the a new card is placed on the pile
     /// </summary>
     protected virtual void OnPileCardChanged(ulong previousCard, ulong newCard)
     {
 
     }
 
+    /// <summary>
+    /// Called when the game starts
+    /// </summary>
     protected virtual void Game_OnGameStarted()
     {
         if (IsServer) CreateAI();
     }
 
-    protected virtual void Game_OnGameEnded() { }
+    /// <summary>
+    /// Called when the game ends
+    /// </summary>
+    protected virtual void Game_OnGameEnded() 
+    {
 
+    }
+
+    /// <summary>
+    /// Called when the game is reset
+    /// </summary>
     protected virtual void Game_OnGameReset()
     {
+        if (IsServer) handCardIds.Clear();
         ResetHand();
+        UnsubscribeAllCards();
     }
+
+    /// <summary>
+    /// Called when any action is executed in the game
+    /// </summary>
     protected virtual void Game_OnActionExecuted() 
     {
         UnsubscribeAllCards();
@@ -249,6 +263,8 @@ public abstract class TablePlayer<TPlayer, TAction, TAI> : NetworkBehaviour
             {
                 foreach (var card in kvp.Value)
                 {
+                    //Debug.Log($"Unsubscribing card from {kvp.Key.Method.Name} on {gameObject.name}");
+
                     card.Interactable.OnInteract -= kvp.Key;
                 }
             }
@@ -268,17 +284,12 @@ public abstract class TablePlayer<TPlayer, TAction, TAI> : NetworkBehaviour
 
 
     /// <summary>
-    /// Called when the players hand is updated
+    /// Called when the players hand card ids are updated, syncronizes the hand for each client
     /// </summary>
     protected virtual void OnHandCardIdsChanged(NetworkListEvent<ulong> changeEvent)
     {
-        if (hand == null)
-        {
-            hand = new PlayerHand();
-            hand.OnHandUpdated += Hand_OnHandUpdated;
-        }
-
         hand.ClearHand();
+
         foreach (ulong cardId in handCardIds)
         {
             PlayingCard card = PlayingCard.GetPlayingCardFromNetworkID(cardId);
@@ -296,7 +307,9 @@ public abstract class TablePlayer<TPlayer, TAction, TAI> : NetworkBehaviour
     public void SubscribeCardTo(PlayingCard card, EventHandler<InteractEventArgs> onInteract) 
     { 
         if (card != null) 
-        { 
+        {
+            //Debug.Log($"Subscribing card to {onInteract.Method.Name} on {gameObject.name}");
+
             card.Interactable.OnInteract += onInteract;
             if (eventSubscriptionDictionary.TryGetValue(onInteract, out List<PlayingCard> cards)) 
             { 
@@ -304,7 +317,7 @@ public abstract class TablePlayer<TPlayer, TAction, TAI> : NetworkBehaviour
             } 
             else eventSubscriptionDictionary.Add(onInteract, new List<PlayingCard>() { card }); 
         }
-        else ConsoleLog.Instance.Log("Cannot find card to subscribe event to");
+        else Debug.Log("Cannot find card to subscribe event to");
     }
 
     /// <summary>
@@ -314,6 +327,8 @@ public abstract class TablePlayer<TPlayer, TAction, TAI> : NetworkBehaviour
     {
         if (card != null)
         {
+            //Debug.Log($"Unsubscribing card from {onInteract.Method.Name} on {gameObject.name}");
+
             card.Interactable.OnInteract -= onInteract;
             if (eventSubscriptionDictionary.TryGetValue(onInteract, out List<PlayingCard> cards))
             {
@@ -389,7 +404,7 @@ public abstract class TablePlayer<TPlayer, TAction, TAI> : NetworkBehaviour
             return;
         }
 
-        hand.AddCard(card);
+        //hand.AddCard(card);
         handCardIds.Add(card.NetworkObjectId);
     }
 
@@ -401,7 +416,7 @@ public abstract class TablePlayer<TPlayer, TAction, TAI> : NetworkBehaviour
             return;
         }
 
-        hand.InsertCard(card, index);
+        //hand.InsertCard(card, index);
         handCardIds.Insert(index, card.NetworkObjectId);
     }
 
@@ -413,10 +428,10 @@ public abstract class TablePlayer<TPlayer, TAction, TAI> : NetworkBehaviour
             return false;
         }
 
-        bool removed = hand.RemoveCard(card);
-        if (removed) handCardIds.Remove(card.NetworkObjectId);
+        //bool removed = hand.RemoveCard(card);
+        //if (removed) handCardIds.Remove(card.NetworkObjectId);
 
-        return removed;
+        return handCardIds.Remove(card.NetworkObjectId);
     }
 
     protected virtual void Hand_OnHandUpdated()

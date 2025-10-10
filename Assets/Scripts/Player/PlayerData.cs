@@ -11,7 +11,6 @@ public class PlayerData : NetworkBehaviour
 
     private Player lobbyPlayer;
 
-
     private NetworkVariable<FixedString32Bytes> playerName = new NetworkVariable<FixedString32Bytes>();
     public NetworkVariable<FixedString32Bytes> PlayerName => playerName;
 
@@ -63,16 +62,16 @@ public class PlayerData : NetworkBehaviour
     private void SetPlayer(string playerId)
     {
         lobbyPlayer = LobbyManager.Instance.GetPlayerById(playerId);
-        if (lobbyPlayer == null) return;
-
-        SetName(lobbyPlayer.Data[LobbyManager.KEY_PLAYER_NAME].Value);
+        SetName();
     }
 
     [ServerRpc] private void SetPlayerServerRpc(string playerId) => SetPlayer(playerId);
 
-    public void SetName(string newName)
+    public void SetName()
     {
-        if (IsServer) playerName.Value = newName;
+        if (lobbyPlayer == null) return;
+
+        if (IsServer) playerName.Value = lobbyPlayer.Data[LobbyManager.KEY_PLAYER_NAME].Value;
     }
 
     public string GetName() => playerName.Value.ToString();

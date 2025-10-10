@@ -93,7 +93,7 @@ public class Interactable : NetworkBehaviour, IInteractable
             allowedClients.Add(client);
         }
 
-        Debug.Log($"{gameObject.name} has been set interactable for [{string.Join(", ", clients)}]");
+        //ConsoleLog.Instance.Log($"{gameObject.name} has been set interactable for [{string.Join(", ", clients)}]");
     }
 
     /// <summary>
@@ -104,8 +104,6 @@ public class Interactable : NetworkBehaviour, IInteractable
         if (!IsServer) return;
         if (!allowedClients.Contains(clientId))
             allowedClients.Add(clientId);
-
-        Debug.Log($"{gameObject.name} has added client [{clientId}]");
     }
 
 
@@ -116,8 +114,6 @@ public class Interactable : NetworkBehaviour, IInteractable
     {
         if (!IsServer) return;
         allowedClients.Remove(clientId);
-
-        Debug.Log($"{gameObject.name} has removed client [{clientId}]");
     }
 
     /// <summary>
@@ -128,8 +124,6 @@ public class Interactable : NetworkBehaviour, IInteractable
         if (!IsServer || allowedClients.Count == 0) return;
 
         allowedClients.Clear();
-
-        Debug.Log($"{gameObject.name} has cleared clients");
     }
 
 

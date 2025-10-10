@@ -30,7 +30,7 @@ public class PlayerManager : NetworkSingleton<PlayerManager>
 
     private void NetworkManager_OnClientConnectedCallback(ulong clientId)
     {
-        if (NetworkManager.Singleton.IsServer)
+        if (IsServer)
         {
             playerCount.Value++;
             ConsoleLog.Instance.Log($"Player {clientId} connected");
@@ -41,10 +41,18 @@ public class PlayerManager : NetworkSingleton<PlayerManager>
 
     private void NetworkManager_OnClientDisconnectedCallback(ulong clientId)
     {
-        if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsServer)
+        if (NetworkManager.Singleton != null && IsServer)
         {
-            playerCount.Value--;
-            ConsoleLog.Instance.Log($"Player {clientId} disconnected");
+            if (players.ContainsKey(clientId))
+            {
+                playerCount.Value--;
+                ConsoleLog.Instance.Log($"Player {clientId} disconnected");
+            }
+            else
+            {
+                ConsoleLog.Instance.Log($"Player {clientId} disconnected and failed to connect");
+            }
+
             players.Remove(clientId);
         }
 

@@ -1,36 +1,41 @@
 using TMPro;
 using Unity.Collections;
+using Unity.Netcode;
 using Unity.VisualScripting;
 using UnityEngine;
 
-public class PlayerNameTag : MonoBehaviour
+public class PlayerNameTag : NetworkBehaviour
 {
     [SerializeField] private TextMeshProUGUI nameText;
+
     private PlayerData playerData;
 
     private void Awake()
     {
         playerData = GetComponentInParent<PlayerData>();
-        if (playerData != null)
-        {
-            Invoke("SetNameTag", 0.2f);
-
-            playerData.OnPlayerSpawned += PlayerData_OnPlayerSpawned;
-        }
     }
 
-    private void OnDestroy()
+    public override void OnNetworkSpawn()
     {
-        if (playerData != null) playerData.OnPlayerSpawned -= PlayerData_OnPlayerSpawned;
+        base.OnNetworkSpawn();
+
+        playerData.PlayerName.OnValueChanged += OnNameChanged;
     }
 
-    private void PlayerData_OnPlayerSpawned()
+    public override void OnNetworkDespawn()
+    {
+        base.OnNetworkDespawn();
+
+        playerData.PlayerName.OnValueChanged -= OnNameChanged;
+    }
+
+    private void OnNameChanged(FixedString32Bytes oldValue, FixedString32Bytes newValue)
     {
         SetNameTag();
     }
 
     public void SetNameTag()
     {
-        nameText.text = playerData.GetName();
+        nameText.text = playerData?.GetName();
     }
 }

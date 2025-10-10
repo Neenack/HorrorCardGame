@@ -70,10 +70,6 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
         //Stacking
         if (cardStacking && cardPile.Count > 0)
         {
-            //Ends player turn before stacking phase
-            currentPlayerTurnClientId.Value = ulong.MaxValue;
-            currentPlayerTurnTableId.Value = ulong.MaxValue;
-
             yield return StartCoroutine(StackingRoutine());
         }
 
@@ -206,7 +202,7 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
         if (!player.IsAI)
         {
             //Set hand and drawn card interactable for the player client, and subscribe them to the event for card drawing
-            InteractionManager.SetHandInteraction(currentPlayer.Hand.Cards, true, currentPlayer , new CambioActionData(CambioActionType.Draw, false, currentPlayer.TablePlayerID));
+            InteractionManager.SetCardInteractions(currentPlayer.Hand.Cards, true, currentPlayer , new CambioActionData(CambioActionType.Draw, false, currentPlayer.TablePlayerID));
             InteractionManager.SetCardInteraction(drawnCard, true, currentPlayer , new CambioActionData(CambioActionType.Draw, false, currentPlayer.TablePlayerID, drawnCard.NetworkObjectId));
         }
         else StartCoroutine(HandleAIDrawDecision());
@@ -272,7 +268,8 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
         }
 
         yield return new WaitForSeconds(3f);
-        ServerEndGame();
+
+        StartCoroutine(ServerEndGame());
     }
 
     [ClientRpc]
@@ -507,23 +504,21 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
 
     private void OnStackingChanged(bool previousValue, bool newValue)
     {
+        if (!IsServer) return;
+
         if (newValue)
         {
             ConsoleLog.Instance.Log("Stacking enabled!");
 
-            foreach (var player in Players)
-            {
-                InteractionManager.SetHandInteraction(player.Hand, true, Players, new CambioActionData(CambioActionType.Stack));
-            }
+            var allCards = Players.SelectMany(p => p.Hand.Cards).ToList();
+            InteractionManager.SetCardInteractions(allCards, true, Players, new CambioActionData(CambioActionType.Stack));
         }
         else
         {
             ConsoleLog.Instance.Log("Stacking disabled!");
 
-            foreach (var player in Players)
-            {
-                InteractionManager.SetHandInteraction(player.Hand, false, Players);
-            }
+            var allCards = Players.SelectMany(p => p.Hand.Cards).ToList();
+            InteractionManager.SetCardInteractions(allCards, false);
         }
     }
 
