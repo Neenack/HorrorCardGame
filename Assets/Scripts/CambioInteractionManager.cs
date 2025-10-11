@@ -76,7 +76,7 @@ public class CambioInteractionManager : TableInteractionManager<CambioPlayer, Ca
                 return new InteractDisplay("", true, "Stack Card", "Try stack a matching card on the pile");
 
             case CambioActionType.GiveCard:
-                return new InteractDisplay("", true, "Choose Card", $"Give card to player");
+                return new InteractDisplay("", true, "Choose Card", $"Give card to {Game.GetPlayerFromTablePlayerID(data.TargetPlayerId).GetName()}");
 
         }
 

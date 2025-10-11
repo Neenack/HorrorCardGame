@@ -222,7 +222,26 @@ public class FirstPersonController : NetworkBehaviour
             playerCamera.gameObject.SetActive(false);
         }
 
+        MainMenu.Instance.OnOpen += Instance_OnOpen;
+        MainMenu.Instance.OnClose += Instance_OnClose;
+
         #endregion
+    }
+
+    private void Instance_OnOpen()
+    {
+        cameraCanMove = false;
+        enableZoom = false;
+        crosshairObject.gameObject.SetActive(false);
+        DisableMovement();
+    }
+
+    private void Instance_OnClose()
+    {
+        cameraCanMove = true;
+        enableZoom = true;
+        crosshairObject.gameObject.SetActive(true);
+        EnableMovement();
     }
 
     float camRotation;

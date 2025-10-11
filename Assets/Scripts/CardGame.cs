@@ -69,7 +69,7 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
     private IInteractable interactableDeck;
 
     [Header("AI")]
-    [SerializeField] private bool fillBots;
+    [SerializeField] protected bool fillBots;
     [SerializeField] protected float AIThinkingTime = 1f;
 
     // Server-only game state
@@ -164,6 +164,9 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
 
         // Start dealing cards
         StartCoroutine(StartGameCoroutine());
+
+        //TEMP RESTART GAME
+        MainMenu.Instance.OnMainMenuRestartGame += MainMenu_OnMainMenuRestartGame;
     }
 
     [ClientRpc]
@@ -193,7 +196,6 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
 
     #region End Logic
 
-
     protected virtual IEnumerator ServerEndGame()
     {
         ConsoleLog.Instance.Log("Game Finished!");
@@ -205,6 +207,19 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
         yield return new WaitForSeconds(1f);
 
         gameState.Value = GameState.WaitingToStart;
+
+        //TEMP RESTART GAME
+        MainMenu.Instance.OnMainMenuRestartGame -= MainMenu_OnMainMenuRestartGame;
+    }
+
+    private void MainMenu_OnMainMenuRestartGame()
+    {
+        StopAllCoroutines();
+
+        if (gameState.Value != GameState.WaitingToStart)
+        {
+            StartCoroutine(ServerEndGame());
+        }
     }
 
     private void ResetGame()

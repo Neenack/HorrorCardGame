@@ -144,6 +144,8 @@ public class CambioPlayerAI : PlayerAI<CambioPlayer, CambioActionData, CambioPla
     /// <returns>True to call cambio</returns>
     private bool ShouldCallCambio()
     {
+        if (cambioPlayer.Hand.Cards.Count == 0) return true;
+
         float confidence = (float)cambioPlayer.SeenCards.Count / player.Hand.Cards.Count;
         float expectedScore = (cambioPlayer.GetScore() / confidence);
 

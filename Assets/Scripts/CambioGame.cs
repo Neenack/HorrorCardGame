@@ -52,6 +52,19 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
         isStacking.OnValueChanged -= OnStackingChanged;
     }
 
+    #region Game Started
+
+    protected override void ServerStartGame()
+    {
+        if (!IsServer) return;
+
+        cardStacking = GamemodeSettings.Instance.Stacking;
+
+        base.ServerStartGame();
+    }
+
+    #endregion
+
     #region Turn Management
 
     protected override IEnumerator NextTurnRoutine()
@@ -78,22 +91,35 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
 
         yield return new WaitForSeconds(0.5f);
 
-        yield return new WaitForSeconds(stackingTime / 2);
-
-        foreach (var player in Players)
+        if (fillBots && Players.Any(p => p.IsAI))
         {
-            if (!player.IsAI) continue;
-            StartCoroutine(ExecuteActionRoutine(player.PlayerAI.DecideAction(TurnContext.AfterTurn)));
+            yield return StartCoroutine(AIStackingRoutine());
         }
-
-        yield return new WaitForSeconds(stackingTime / 2);
-
-        InteractionManager.ResetAllInteractions();
-
-        isStacking.Value = false;
+        else
+        {
+            yield return new WaitForSeconds(stackingTime);
+        }
 
         //Waits until players have finished the stacking routine if someone stacked a card
         yield return new WaitUntil(() => playerHasStackedCard == false);
+
+        isStacking.Value = false;
+    }
+
+    private IEnumerator AIStackingRoutine()
+    {
+        float randomTime = UnityEngine.Random.Range(0, stackingTime);
+
+        yield return new WaitForSeconds(randomTime);
+
+        foreach (var player in Players)
+        {
+            if (!player.IsAI || playerHasStackedCard) continue;
+
+            StartCoroutine(ExecuteActionRoutine(player.PlayerAI.DecideAction(TurnContext.AfterTurn)));
+        }
+
+        yield return new WaitForSeconds(stackingTime - randomTime);
     }
 
     /// <summary>
@@ -348,7 +374,7 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
                 ChooseCard(targetCard);
                 yield break;
             case CambioActionType.Stack:
-                StackCard(player, targetCard);
+                TryStackCard(player, targetCard);
                 yield break;
             case CambioActionType.GiveCard:
                 GiveStackCard(targetCard);
@@ -523,9 +549,11 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
     /// <summary>
     /// Called when a player stacks a card
     /// </summary>
-    private void StackCard(CambioPlayer playerWhoStacked, PlayingCard cardToStack)
+    private void TryStackCard(CambioPlayer playerWhoStacked, PlayingCard cardToStack)
     {
-        if (playerHasStackedCard || isStacking.Value == false) return;
+        InteractionManager.ResetAllInteractions();
+
+        if (playerHasStackedCard || isStacking.Value == false || cardPile.Count == 0) return;
 
         CambioPlayer playerWithCard = GetPlayerWithCard(cardToStack);
 
@@ -533,15 +561,12 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
 
         playerHasStackedCard = true;
 
-        InteractionManager.ResetAllInteractions();
-
         StartCoroutine(StackCoroutine(playerWithCard, playerWhoStacked, cardToStack));
     }
 
     private IEnumerator StackCoroutine(CambioPlayer playerWithCard, CambioPlayer playerWhoStacked, PlayingCard cardToStack)
     {
         bool isCorrect = cardToStack.GetValue(false) == cardPile[cardPile.Count - 1].GetValue(false);
-
 
         PlaceCardOnPile(cardToStack);
 
@@ -571,7 +596,7 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
                 playerToRecieveCard = playerWithCard;
 
                 //Player who stacked can give one of their cards to the other player
-                InteractionManager.SetHandInteraction(playerWhoStacked.Hand, true, playerWhoStacked, new CambioActionData(CambioActionType.GiveCard, false, playerWhoStacked.TablePlayerID));
+                InteractionManager.SetHandInteraction(playerWhoStacked.Hand, true, playerWhoStacked, new CambioActionData(CambioActionType.GiveCard, false, playerWhoStacked.TablePlayerID, 0, playerWithCard.TablePlayerID));
 
                 yield return new WaitUntil(() => waitingForStackInput == false);
             }
@@ -583,7 +608,15 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
 
     private void GiveStackCard(PlayingCard card)
     {
-        playerToRecieveCard.AddCardToHand(card);
+        CambioPlayer playerWithCard = GetPlayerWithCard(card);
+
+        if (playerWithCard.RemoveCardFromHand(card))
+        {
+            playerToRecieveCard.AddCardToHand(card);
+        }
+        else Debug.Log("Failed to remove card from hands");
+
+        playerToRecieveCard = null;
         waitingForStackInput = false;
     }
 

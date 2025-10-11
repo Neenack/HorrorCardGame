@@ -8,6 +8,7 @@ public class PlayerInteractor : NetworkBehaviour
     public event Action OnInteractTargetUpdated;
 
     [Header("Interaction Settings")]
+    [SerializeField] private bool canInteract = true;
     [SerializeField] private Camera playerCamera;
     [SerializeField] private float interactDistance = 5f;
     [SerializeField] private Transform holdPos;
@@ -24,9 +25,38 @@ public class PlayerInteractor : NetworkBehaviour
 
     public IInteractable GetCurrentInteractable() => currentTarget;
 
+    private void Awake()
+    {
+        MainMenu.Instance.OnOpen += MainMenu_OnOpen;
+        MainMenu.Instance.OnClose += MainMenu_OnClose;
+    }
+    public override void OnDestroy()
+    {
+        MainMenu.Instance.OnOpen -= MainMenu_OnOpen;
+        MainMenu.Instance.OnClose -= MainMenu_OnClose;
+    }
+
+    private void MainMenu_OnClose() => EnableInteract();
+    private void MainMenu_OnOpen() => DisableInteract();
+
+    public void EnableInteract()
+    {
+        canInteract = true;
+    }
+
+    public void DisableInteract()
+    {
+        canInteract = false;
+
+        currentTarget = null;
+        ClearHighlight();
+        OnInteractTargetUpdated?.Invoke();
+    }
 
     void Update()
     {
+        if (!canInteract) return;
+
         // Always raycast to check for highlight
         CheckForInteractable();
 

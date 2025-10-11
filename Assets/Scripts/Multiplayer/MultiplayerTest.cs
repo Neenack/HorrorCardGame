@@ -9,6 +9,16 @@ public class MultiplayerTest : MonoBehaviour
     [SerializeField] private TMP_InputField inputField;
     [SerializeField] private TextMeshProUGUI codeText;
 
+    private void Start()
+    {
+#if UNITY_EDITOR
+
+#else
+        HideBtns();
+#endif
+
+    }
+
     public void HostRelay()
     {
         HostAsync();

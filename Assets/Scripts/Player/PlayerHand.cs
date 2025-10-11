@@ -32,6 +32,21 @@ public class PlayerHand
     }
 
 
+    /// <summary>
+    /// Adds a range of card to the  players hand
+    /// </summary>
+    public void AddCards(List<PlayingCard> newCards)
+    {
+        if (newCards == null || newCards.Count == 0) return;
+
+        cards.AddRange(newCards);
+
+        foreach (var card in cards) card.OnShowCard += Card_OnShowCard;
+
+        OnHandUpdated?.Invoke();
+    }
+
+
 
     /// <summary>
     /// Inserts a card into the players hand

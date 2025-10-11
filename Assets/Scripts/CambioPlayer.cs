@@ -141,6 +141,14 @@ public class CambioPlayer : TablePlayer<CambioPlayer, CambioActionData, CambioPl
         HideAllButtons();
     }
 
+    protected override void Game_OnGameReset()
+    {
+        base.Game_OnGameReset();
+
+        HideAllText();
+        HideAllButtons();
+    }
+
     protected override void OnTurnStarted()
     {
         base.OnTurnStarted();

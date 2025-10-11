@@ -169,6 +169,7 @@ public abstract class TablePlayer<TPlayer, TAction, TAI> : NetworkBehaviour
     protected virtual void OnTurnChanged(ulong oldValue, ulong newValue)
     {
         UnsubscribeAllCards();
+
         Hand.UpdateHand();
 
         if (oldValue == TablePlayerID && isTurn)
@@ -212,6 +213,7 @@ public abstract class TablePlayer<TPlayer, TAction, TAI> : NetworkBehaviour
     protected virtual void Game_OnGameReset()
     {
         if (IsServer) handCardIds.Clear();
+
         ResetHand();
         UnsubscribeAllCards();
     }
@@ -247,11 +249,20 @@ public abstract class TablePlayer<TPlayer, TAction, TAI> : NetworkBehaviour
     {
         hand.ClearHand();
 
+        /*
         foreach (ulong cardId in handCardIds)
         {
             PlayingCard card = PlayingCard.GetPlayingCardFromNetworkID(cardId);
             if (card) hand.AddCard(card);
         }
+        */
+
+        List<PlayingCard> cards = new List<PlayingCard>();
+        foreach (ulong cardId in handCardIds)
+        {
+            cards.Add(PlayingCard.GetPlayingCardFromNetworkID(cardId));
+        }
+        hand.AddCards(cards);
     }
 
     #endregion
@@ -412,7 +423,7 @@ public abstract class TablePlayer<TPlayer, TAction, TAI> : NetworkBehaviour
         RecentreCards();
     }
 
-    public void RecentreCards(float lerpSpeed = 5f)
+    public virtual void RecentreCards(float lerpSpeed = 5f)
     {
         if (!IsServer) return;
 
