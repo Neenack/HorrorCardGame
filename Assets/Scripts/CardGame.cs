@@ -149,7 +149,7 @@ public abstract class CardGame<TPlayer, TAction, TAI> : NetworkBehaviour, ICardG
         ConsoleLog.Instance.Log("Start Game");
 
         //Make list of active players, if not using bots do not include them
-        activePlayers = GamemodeSettings.Instance.UseAI ? tablePlayers : tablePlayers.Where(p => p.PlayerData != null).ToList();
+        activePlayers = GamemodeSettingsManager.Instance.UseAI ? tablePlayers : tablePlayers.Where(p => p.PlayerData != null).ToList();
         foreach (var player in activePlayers) player.SetGame(this);
 
         GameStartClientRpc(activePlayers.Select(p => p.TablePlayerID).ToArray());

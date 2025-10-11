@@ -203,7 +203,7 @@ public class CambioPlayerAI : PlayerAI<CambioPlayer, CambioActionData, CambioPla
     /// <returns>A playing card</returns>
     public PlayingCard GetCardtoSwap()
     {
-        if (WillMisplay()) return GetRandomCard(player);
+        if (MakeMistake()) return GetRandomCard(player);
 
         List<PlayingCard> unseenCards = player.Hand.Cards.Where(c => !cambioPlayer.SeenCards.Contains(c)).ToList();
 
@@ -223,7 +223,7 @@ public class CambioPlayerAI : PlayerAI<CambioPlayer, CambioActionData, CambioPla
     public PlayingCard GetCardToReveal()
     {
         //If seen all cards or will misplay, return a random card
-        if (WillMisplay() || cambioPlayer.SeenCards.Count == player.Hand.Cards.Count)
+        if (MakeMistake() || cambioPlayer.SeenCards.Count == player.Hand.Cards.Count)
         {
             return GetRandomCard(player);
         }
@@ -266,7 +266,7 @@ public class CambioPlayerAI : PlayerAI<CambioPlayer, CambioActionData, CambioPla
         }
 
         //Swap with the lowest players hand
-        if (lowestCardCount < handCardCount && !WillMisplay()) return bestPlayer;
+        if (lowestCardCount < handCardCount && !MakeMistake()) return bestPlayer;
 
         // If AI has the fewest cards, do not swap
         if (lowestCardCount > handCardCount) return null;
@@ -284,7 +284,7 @@ public class CambioPlayerAI : PlayerAI<CambioPlayer, CambioActionData, CambioPla
 
         bool wantsToSwap = estimatedScore > maxScore * swapThresholdFraction;
 
-        return wantsToSwap && !WillMisplay() ? GetRandomPlayer() : null;
+        return wantsToSwap && !MakeMistake() ? GetRandomPlayer() : null;
     }
 
 
@@ -295,7 +295,7 @@ public class CambioPlayerAI : PlayerAI<CambioPlayer, CambioActionData, CambioPla
     /// <returns>True if the player would like to swap hands</returns>
     private CambioPlayer GetPlayerToCompareCards()
     {
-        if (WillMisplay()) return GetRandomPlayer();
+        if (MakeMistake()) return GetRandomPlayer();
 
         return GetPlayerWithSmallestHand();
     }
@@ -311,7 +311,7 @@ public class CambioPlayerAI : PlayerAI<CambioPlayer, CambioActionData, CambioPla
         int card1Value = CambioPlayer.GetCardValue(card1);
         int card2Value = CambioPlayer.GetCardValue(card2);
 
-        if (WillMisplay()) return UnityEngine.Random.value < 0.5f ? card1 : card2;
+        if (MakeMistake()) return UnityEngine.Random.value < 0.5f ? card1 : card2;
 
         if (card1Value < card2Value) return card1;
         return card2;
@@ -369,7 +369,7 @@ public class CambioPlayerAI : PlayerAI<CambioPlayer, CambioActionData, CambioPla
 
         if (!canStack) return false; //Return false if cannot stack
 
-        return WillMisplay() ? false : true; //If can stack, check misplay
+        return MakeMistake() ? false : true; //If can stack, check misplay
     }
 
 
@@ -383,7 +383,7 @@ public class CambioPlayerAI : PlayerAI<CambioPlayer, CambioActionData, CambioPla
         PlayingCard card = GetMatchingCardToStack();
         if (card == null) return null;
 
-        return WillMisplay() ? GetRandomCard(cambioPlayer) : card;
+        return MakeMistake() ? GetRandomCard(cambioPlayer) : card;
     }
 
 

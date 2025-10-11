@@ -60,7 +60,7 @@ public class CardGameDeckInteractable : Interactable
     {
         if (game?.CurrentGameState.Value != GameState.WaitingToStart) return;
 
-        bool fillBots = GamemodeSettings.Instance.UseAI;
+        bool fillBots = GamemodeSettingsManager.Instance.UseAI;
         bool clientConnecting = ServerRelay.Instance.IsClientConnecting;
 
         SetInteractable((fillBots || PlayerManager.Instance.PlayerCount > 1) && !clientConnecting);

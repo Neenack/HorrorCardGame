@@ -12,8 +12,11 @@ EditorBuildSettings:
     path: Assets/ModularFirstPersonController/DemoScene/Demo.unity
     guid: 9fc0d4010bbf28b4594072e72b8655ab
   - enabled: 1
-    path: Assets/PolygonHorrorCarnival/Scenes/Demo.unity
+    path: Assets/Scenes/GameScene.unity
     guid: 97bd7f6fde7c6b245b8d36db330e0049
+  - enabled: 1
+    path: Assets/Scenes/LobbyScene.unity
+    guid: fc0d463481f2455418d016864fbcf7ab
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
   m_UseUCBPForAssetBundles: 0

@@ -15,6 +15,7 @@ public class MainMenu : MonoSingleton<MainMenu>
     [SerializeField] private GameObject pauseMenuUI;
     [SerializeField] private Button resumeButton;
     [SerializeField] private Button restartButton;
+    [SerializeField] private Button leaveGameButton;
     [SerializeField] private Button quitButton;
 
     private bool isPaused = false;
@@ -28,6 +29,7 @@ public class MainMenu : MonoSingleton<MainMenu>
         // Subscribe button events
         resumeButton.onClick.AddListener(ResumeGame);
         restartButton.onClick.AddListener(RestartGame);
+        leaveGameButton.onClick.AddListener(LeaveGame);
         quitButton.onClick.AddListener(QuitGame);
 
         LobbyManager.Instance.OnGameStarted += Instance_OnGameStarted;
@@ -67,6 +69,11 @@ public class MainMenu : MonoSingleton<MainMenu>
         Cursor.visible = false;
 
         OnClose?.Invoke();
+    }
+
+    private void LeaveGame()
+    {
+        LobbyManager.Instance.LeaveLobbyAndReturnToMenu();
     }
 
     private void RestartGame()

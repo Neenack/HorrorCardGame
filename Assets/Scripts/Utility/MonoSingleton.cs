@@ -39,6 +39,11 @@ public abstract class MonoSingleton<T> : MonoBehaviour where T : MonoSingleton<T
         {
             instance = this as T;
         }
+        else if (instance != this)
+        {
+            Debug.LogWarning($"Duplicate singleton of type {typeof(T).Name} found on {gameObject.name}, destroying it.");
+            Destroy(gameObject);
+        }
     }
 
     public virtual void OnDestroy()

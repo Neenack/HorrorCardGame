@@ -30,8 +30,6 @@ public abstract class PlayerAI<TPlayer, TAction, TAI>
     {
         player = playerRef;
         this.difficulty = difficulty;
-
-        Debug.Log("Created AI with difficulty: " + difficulty.ToString());
     }
 
     /// <summary>
@@ -64,10 +62,10 @@ public abstract class PlayerAI<TPlayer, TAction, TAI>
     /// Checks whether the AI should missplay their action
     /// </summary>
     /// <returns> True if it should missplay </returns>
-    protected bool WillMisplay() => UnityEngine.Random.value < GetMisplayChance();
+    protected bool MakeMistake() => UnityEngine.Random.value < GetMistakeChance();
 
 
-    private float GetMisplayChance() => difficulty switch
+    private float GetMistakeChance() => difficulty switch
     {
         Difficulty.Easy => EASY_MISPLAY_CHANCE,
         Difficulty.Normal => NORMAL_MISPLAY_CHANCE,

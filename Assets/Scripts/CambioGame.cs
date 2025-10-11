@@ -58,7 +58,7 @@ public class CambioGame : CardGame<CambioPlayer, CambioActionData, CambioPlayerA
     {
         if (!IsServer) return;
 
-        cardStacking = GamemodeSettings.Instance.Stacking;
+        cardStacking = GamemodeSettingsManager.Instance.Stacking;
 
         base.ServerStartGame();
     }
