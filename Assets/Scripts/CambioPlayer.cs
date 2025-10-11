@@ -332,7 +332,7 @@ public class CambioPlayer : TablePlayer<CambioPlayer, CambioActionData, CambioPl
     /// <summary>
     /// Initialises the Player AI
     /// </summary>
-    protected override CambioPlayerAI CreateAI() => playerAI = new CambioPlayerAI(this);
+    protected override CambioPlayerAI CreateAI() => playerAI = new CambioPlayerAI(this, GamemodeSettings.Instance.AIDifficulty);
 
     #endregion
 }

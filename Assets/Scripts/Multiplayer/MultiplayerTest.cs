@@ -15,6 +15,7 @@ public class MultiplayerTest : MonoBehaviour
 
 #else
         HideBtns();
+        codeText.gameObject.SetActive(false);
 #endif
 
     }

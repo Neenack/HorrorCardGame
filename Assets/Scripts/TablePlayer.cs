@@ -39,7 +39,6 @@ public abstract class TablePlayer<TPlayer, TAction, TAI> : NetworkBehaviour
     [SerializeField] protected float yOffset = 0;
     [SerializeField] private float fanAngle = 0f;
 
-
     #region Public Accessors
 
     public bool IsAI => playerData == null;
